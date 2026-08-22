@@ -6,19 +6,20 @@ Secure, multi-tenant booking-request product used by Meridian client sites. The 
 
 - **Next.js** (App Router) + **TypeScript**
 - **Tailwind CSS** with Meridian design tokens
-- **Supabase** (Auth, Postgres, RLS) — wired in later phases
+- **Supabase** (Auth, Postgres, RLS) — schema + RLS in Phase 1
 - **Resend** (or equivalent) for transactional email — wired in later phases
 
 ## Current status
 
-**Phase 0 — platform foundation** is in place:
+**Phase 0 — platform foundation** and **Phase 1 — database and tenant security** are in place:
 
-- App layout and Meridian design tokens
-- Reusable UI primitives
+- App layout, Meridian design tokens, and UI primitives
 - Route placeholders for public booking, login, dashboard, and admin
-- Folder structure for routes, components, lib, types, emails, Supabase, tests, and docs
+- Version-controlled Supabase schema for businesses, profiles, memberships, settings, services, bookings, events, and audit logs
+- Row Level Security so business users only access their own tenant data
+- Seed data for two test businesses plus migration/RLS tests
 
-No database connection or booking logic yet.
+Public booking submission and client dashboard auth land in later phases.
 
 ## Local setup
 
@@ -51,12 +52,24 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Lint & build
+### Lint, test & build
 
 ```bash
 npm run lint
+npm test
 npm run build
 ```
+
+Tenant isolation details: [docs/tenant-isolation.md](docs/tenant-isolation.md).
+
+### Local Supabase (optional)
+
+```bash
+npx supabase start
+npx supabase db reset
+```
+
+Then set `.env.local` from the CLI output (`API URL`, `anon key`, `service_role key`).
 
 ## Architecture summary
 
@@ -90,12 +103,12 @@ Public booking form
 → Confirmed booking calendar
 ```
 
-### Multi-tenancy (from Phase 1)
+### Multi-tenancy (Phase 1)
 
-- Every client-owned row includes `business_id`
-- Roles: `meridian_admin`, `business_admin`, `business_member`
+- Every client-owned row includes `business_id` (except `businesses` itself and user `profiles`)
+- Roles: `meridian_admin` (platform), `business_admin`, `business_member` (memberships)
 - Row Level Security restricts business users to their own data
-- Service-role key stays server-side only
+- Service-role client: `src/lib/supabase/admin.ts` only (`server-only`) — never expose to the browser
 
 ### Out of scope (unless a later phase asks)
 
@@ -136,6 +149,7 @@ Placeholder names only (see `.env.example`):
 | `npm run build` | Production build |
 | `npm run start` | Serve production build |
 | `npm run lint` | Run ESLint |
+| `npm test` | Run Vitest (migration + optional live RLS tests) |
 
 ## License
 

@@ -1,3 +1,5 @@
+import type { BookingMode, BookingStatus } from "@/types/database";
+
 export type ClassValue =
   | string
   | false
@@ -6,12 +8,4 @@ export type ClassValue =
   | ClassValue[]
   | Record<string, boolean | undefined | null>;
 
-/** Shared booking status values used by UI primitives (data layer comes later). */
-export type BookingStatus =
-  | "pending"
-  | "confirmed"
-  | "declined"
-  | "cancelled"
-  | "suggested";
-
-export type BookingMode = "meridian" | "external" | "hybrid";
+export type { BookingMode, BookingStatus };

@@ -1,5 +1,7 @@
 /**
  * Shared library helpers.
- * Supabase clients, validation, rate limiting, and email utilities arrive in later phases.
+ * Prefer importing from specific modules (e.g. `@/lib/supabase/server`)
+ * rather than this barrel — especially never pull admin/service-role via a
+ * shared client entrypoint.
  */
 export { cn } from "./cn";
