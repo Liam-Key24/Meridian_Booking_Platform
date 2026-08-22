@@ -2,23 +2,29 @@
 
 Secure, multi-tenant booking-request product used by Meridian client sites. The marketing website is separate; this repository is the shared booking platform only.
 
+> **Supabase project:** use **Meridian Platform Development** only.  
+> Never connect to, alter, or reuse the Meridian Marketing Supabase project.  
+> **Never commit secrets** (`.env.local`, service-role keys, publishable keys with real values, passwords).
+
 ## Stack
 
 - **Next.js** (App Router) + **TypeScript**
 - **Tailwind CSS** with Meridian design tokens
-- **Supabase** (Auth, Postgres, RLS) — wired in later phases
-- **Resend** (or equivalent) for transactional email — wired in later phases
+- **Supabase** (Auth, Postgres, RLS) — Meridian Platform Development
+- Transactional email (e.g. Resend) — later stages
 
 ## Current status
 
-**Phase 0 — platform foundation** is in place:
+**Stage 0 — initialise and link the development environment** is in place:
 
-- App layout and Meridian design tokens
-- Reusable UI primitives
-- Route placeholders for public booking, login, dashboard, and admin
-- Folder structure for routes, components, lib, types, emails, Supabase, tests, and docs
+- App Router layout and Meridian design tokens
+- Reusable UI primitives (including error state)
+- Route placeholders for `/book/[businessSlug]`, `/login`, `/dashboard`, `/admin`
+- Folder structure for app, components, lib, types, emails, Supabase, tests, and docs
+- Local Supabase CLI config (`supabase/config.toml`)
+- `.env.example` with variable names only
 
-No database connection or booking logic yet.
+No tables, authentication, booking logic, or email sending in this stage.
 
 ## Local setup
 
@@ -26,6 +32,8 @@ No database connection or booking logic yet.
 
 - Node.js 20+ (recommended)
 - npm 10+
+- Supabase CLI (`npx supabase`) for linking and migrations
+- Access to the **Meridian Platform Development** Supabase project (not Marketing)
 
 ### Install
 
@@ -33,15 +41,46 @@ No database connection or booking logic yet.
 npm install
 ```
 
-### Environment variables
-
-Copy the example file and fill values when later phases require them:
+### Create `.env.local`
 
 ```bash
 cp .env.example .env.local
 ```
 
-See [Environment variables](#environment-variables) below. Do not commit real secrets.
+Fill values from the Meridian Platform Development project settings (API URL, publishable/anon key, service-role key). Keep `NEXT_PUBLIC_SITE_URL` as your local or deployed app origin (e.g. `http://localhost:3000`).
+
+**Do not commit `.env.local`.** It is gitignored. Never put the service-role key in any `NEXT_PUBLIC_*` variable.
+
+### Link to Meridian Platform Development
+
+From the repo root, with the Supabase CLI logged in to the correct organisation:
+
+```bash
+npx supabase login
+npx supabase link --project-ref <MERIDIAN_PLATFORM_DEVELOPMENT_PROJECT_REF>
+```
+
+Confirm the linked project name is **Meridian Platform Development** before running any remote commands. If you see Marketing credentials or a Marketing project ref, stop and re-link.
+
+Optional local stack (Docker required):
+
+```bash
+npx supabase start
+```
+
+Use local keys from the CLI output only for local Docker; for shared Development, use the cloud project keys in `.env.local`.
+
+### Run migrations
+
+Migrations live in `supabase/migrations/` (none in Stage 0 — schema starts in Stage 1).
+
+```bash
+# Against the linked Meridian Platform Development project (after Stage 1+)
+npx supabase db push
+
+# Or reset/apply locally
+npx supabase db reset
+```
 
 ### Develop
 
@@ -51,11 +90,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Lint & build
+### Lint, build, and tests
 
 ```bash
 npm run lint
 npm run build
+# npm test   # added when automated tests land in later stages
 ```
 
 ## Architecture summary
@@ -64,7 +104,7 @@ npm run build
 src/
   app/                 # Next.js routes (book, login, dashboard, admin)
   components/
-    ui/                # Shared primitives (button, input, card, …)
+    ui/                # Shared primitives
     booking/           # Public booking UI (later)
     dashboard/         # Client dashboard UI (later)
     admin/             # Meridian admin UI (later)
@@ -73,10 +113,11 @@ src/
   styles/              # Design tokens
   types/               # Shared TypeScript types
 supabase/
-  migrations/          # Version-controlled schema & RLS (Phase 1+)
+  config.toml          # Local Supabase CLI config
+  migrations/          # Version-controlled schema & RLS (Stage 1+)
   functions/           # Edge functions if needed (later)
-tests/                 # Automated tests (Phase 1+)
-docs/                  # Operational and onboarding docs (later)
+tests/                 # Automated tests (later)
+docs/                  # Operational docs (later)
 ```
 
 ### Planned booking workflow
@@ -90,43 +131,41 @@ Public booking form
 → Confirmed booking calendar
 ```
 
-### Multi-tenancy (from Phase 1)
+### Security (from Stage 1)
 
-- Every client-owned row includes `business_id`
+- Every tenant-owned row includes `business_id`
 - Roles: `meridian_admin`, `business_admin`, `business_member`
-- Row Level Security restricts business users to their own data
-- Service-role key stays server-side only
+- Row Level Security on client-accessible tables
+- Service-role key server-side only — never `NEXT_PUBLIC_`
 
-### Out of scope (unless a later phase asks)
+### Out of scope
 
-Live availability, payments, staff rotas, calendar sync, booking-provider integrations, floor plans, waitlists, and mobile apps.
+Google Calendar / Google APIs, payment APIs, external booking-provider integrations, live availability, SMS, staff rotas, floor plans, and calendar sync.
 
 ## Design system
 
 Light, minimal, playful, and premium. Default radius is **20px**. Base palette:
 
-| Token        | Hex       |
-|--------------|-----------|
-| Deep teal    | `#16697A` |
-| Mid blue     | `#489FB5` |
-| Soft blue    | `#82C0CC` |
-| Accent orange| `#FFA62B` |
-| Surface      | white / light blue-grey |
+| Token         | Hex       |
+|---------------|-----------|
+| Deep teal     | `#16697A` |
+| Mid blue      | `#489FB5` |
+| Soft blue     | `#82C0CC` |
+| Accent orange | `#FFA62B` |
+| Surface       | white / light blue-grey |
 
-Tokens live in `src/styles/tokens.css` and are exposed to Tailwind via `src/app/globals.css`. Client brand overrides (colours, logo, copy) will be configuration-driven later — do not hard-code one client’s brand into the platform shell.
+Tokens live in `src/styles/tokens.css`. Client brand overrides will be configuration-driven later — do not hard-code one client’s brand into the platform.
 
 ## Environment variables
 
-Placeholder names only (see `.env.example`):
+Names only (see `.env.example`):
 
 | Variable | Purpose |
 |----------|---------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (public) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (public, RLS-scoped) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Meridian Platform Development API URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe publishable/anon key (RLS-scoped) |
+| `NEXT_PUBLIC_SITE_URL` | App origin for absolute links |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only privileged key — never expose to the browser |
-| `RESEND_API_KEY` | Transactional email provider API key |
-| `EMAIL_FROM` | Default from address for platform emails |
-| `NEXT_PUBLIC_APP_URL` | Canonical app URL for links in emails |
 
 ## Scripts
 

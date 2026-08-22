@@ -2,6 +2,7 @@ import {
   Badge,
   Card,
   EmptyState,
+  ErrorState,
   StatusLabel,
 } from "@/components/ui";
 
@@ -30,6 +31,12 @@ export default function DashboardPage() {
           description="When clients submit requests, pending items will appear in this queue."
         />
       </Card>
+
+      <ErrorState
+        className="opacity-90"
+        title="Error state preview"
+        description="Reusable error UI for dashboard and booking failures in later stages."
+      />
     </main>
   );
 }
