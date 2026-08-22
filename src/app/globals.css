@@ -1,0 +1,60 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@theme inline {
+  --color-meridian-teal: var(--meridian-teal);
+  --color-meridian-blue: var(--meridian-blue);
+  --color-meridian-soft-blue: var(--meridian-soft-blue);
+  --color-meridian-accent: var(--meridian-accent);
+  --color-meridian-surface: var(--meridian-surface);
+  --color-meridian-surface-muted: var(--meridian-surface-muted);
+  --color-meridian-surface-subtle: var(--meridian-surface-subtle);
+  --color-meridian-border: var(--meridian-border);
+  --color-meridian-border-strong: var(--meridian-border-strong);
+  --color-meridian-text: var(--meridian-text);
+  --color-meridian-text-muted: var(--meridian-text-muted);
+  --color-meridian-text-inverse: var(--meridian-text-inverse);
+  --color-meridian-status-pending: var(--meridian-status-pending);
+  --color-meridian-status-pending-bg: var(--meridian-status-pending-bg);
+  --color-meridian-status-confirmed: var(--meridian-status-confirmed);
+  --color-meridian-status-confirmed-bg: var(--meridian-status-confirmed-bg);
+  --color-meridian-status-declined: var(--meridian-status-declined);
+  --color-meridian-status-declined-bg: var(--meridian-status-declined-bg);
+  --color-meridian-status-cancelled: var(--meridian-status-cancelled);
+  --color-meridian-status-cancelled-bg: var(--meridian-status-cancelled-bg);
+  --color-meridian-status-suggested: var(--meridian-status-suggested);
+  --color-meridian-status-suggested-bg: var(--meridian-status-suggested-bg);
+  --radius-meridian: var(--meridian-radius);
+  --radius-meridian-sm: var(--meridian-radius-sm);
+  --font-sans: var(--font-meridian-sans);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    background: var(--meridian-surface-muted);
+    color: var(--meridian-text);
+    font-family: var(--font-meridian-sans), ui-sans-serif, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--meridian-soft-blue) 55%, white);
+    color: var(--meridian-text);
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--meridian-focus-ring);
+  }
+}

@@ -1,0 +1,43 @@
+/**
+ * Meridian design tokens.
+ * Client templates may override these CSS variables for brand customisation.
+ */
+:root {
+  /* Brand palette (platform defaults — overridable per business later) */
+  --meridian-teal: #16697a;
+  --meridian-blue: #489fb5;
+  --meridian-soft-blue: #82c0cc;
+  --meridian-accent: #ffa62b;
+
+  /* Surfaces */
+  --meridian-surface: #ffffff;
+  --meridian-surface-muted: #f4f8fa;
+  --meridian-surface-subtle: #eef4f6;
+  --meridian-border: #d7e4e8;
+  --meridian-border-strong: #b8cdd4;
+
+  /* Text */
+  --meridian-text: #143a44;
+  --meridian-text-muted: #5a7580;
+  --meridian-text-inverse: #ffffff;
+
+  /* Status */
+  --meridian-status-pending: #c47a12;
+  --meridian-status-pending-bg: #fff4e5;
+  --meridian-status-confirmed: #1a7a5c;
+  --meridian-status-confirmed-bg: #e6f6ef;
+  --meridian-status-declined: #b42318;
+  --meridian-status-declined-bg: #fef3f2;
+  --meridian-status-cancelled: #5a7580;
+  --meridian-status-cancelled-bg: #eef2f4;
+  --meridian-status-suggested: #16697a;
+  --meridian-status-suggested-bg: #e8f4f7;
+
+  /* Shape & focus */
+  --meridian-radius: 20px;
+  --meridian-radius-sm: 12px;
+  --meridian-focus-ring: 0 0 0 3px color-mix(in srgb, var(--meridian-blue) 45%, transparent);
+
+  /* Spacing rhythm */
+  --meridian-space-page: clamp(1.25rem, 3vw, 2.5rem);
+}
