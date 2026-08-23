@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Badge, EmptyState, ErrorState } from "@/components/ui";
+import { ErrorState } from "@/components/ui";
 import { BookingCalendar } from "@/components/dashboard/booking-calendar";
 import {
   calendarRange,
-  groupBookingsByDate,
   longDateLabel,
   parseCalendarQuery,
   todayLocalIso,
@@ -36,7 +35,6 @@ export default async function DashboardCalendarPage({ searchParams }: PageProps)
     context.business.id,
     { status: "confirmed", from: range.from, to: range.to },
   );
-  const bookingsByDate = groupBookingsByDate(bookings);
   const todayIso = todayLocalIso();
   const heading =
     query.view === "day"
@@ -47,7 +45,6 @@ export default async function DashboardCalendarPage({ searchParams }: PageProps)
     <main className="flex w-full flex-1 flex-col gap-6 px-[var(--meridian-space-page)] py-6 lg:py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <Badge tone="blue">Calendar</Badge>
           <h2 className="text-3xl font-semibold tracking-tight text-meridian-text">
             Confirmed bookings
           </h2>
@@ -55,7 +52,7 @@ export default async function DashboardCalendarPage({ searchParams }: PageProps)
         </div>
         <Link
           href={`/dashboard/bookings/new?date=${query.date}`}
-          className="inline-flex h-11 items-center justify-center rounded-meridian bg-meridian-teal px-5 text-sm font-semibold text-meridian-text-inverse"
+          className="inline-flex h-11 cursor-pointer items-center justify-center rounded-meridian bg-meridian-teal px-5 text-sm font-semibold text-meridian-text-inverse"
         >
           New booking
         </Link>
@@ -75,21 +72,15 @@ export default async function DashboardCalendarPage({ searchParams }: PageProps)
           <ErrorState title="Could not load calendar" description={error} />
         ) : (
           <BookingCalendar
+            businessId={context.business.id}
             view={query.view}
             anchorDate={query.date}
             days={range.days}
-            bookingsByDate={bookingsByDate}
+            bookings={bookings}
             todayIso={todayIso}
           />
         )}
       </section>
-
-      {!error && bookings.length === 0 ? (
-        <EmptyState
-          title="No confirmed bookings in this range"
-          description="Approve a request or add a manual booking to see it here."
-        />
-      ) : null}
     </main>
   );
 }
