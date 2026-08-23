@@ -1,5 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  getDefaultPostLoginPath,
+  getSafeRedirectPath,
+} from "@/lib/auth/safe-redirect";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
 
@@ -19,6 +23,7 @@ export async function proxy(request: NextRequest) {
     ) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
+      loginUrl.search = "";
       loginUrl.searchParams.set("next", request.nextUrl.pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -53,14 +58,17 @@ export async function proxy(request: NextRequest) {
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
+    loginUrl.search = "";
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (request.nextUrl.pathname === "/login" && user) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
+    const destination = getSafeRedirectPath(
+      request.nextUrl.searchParams.get("next"),
+      getDefaultPostLoginPath(),
+    );
+    return NextResponse.redirect(new URL(destination, request.nextUrl.origin));
   }
 
   return response;

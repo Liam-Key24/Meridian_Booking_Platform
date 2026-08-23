@@ -13,7 +13,7 @@ export type MeridianAdminContext = AuthSnapshot & {
 export async function requireMeridianAdmin(): Promise<MeridianAdminContext> {
   const snapshot = await getAuthSnapshot();
   if (!snapshot) {
-    redirect("/login");
+    redirect("/login?next=/admin");
   }
   if (!snapshot.isMeridianAdmin) {
     redirect("/admin");

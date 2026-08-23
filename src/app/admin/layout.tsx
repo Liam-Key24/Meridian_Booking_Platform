@@ -18,7 +18,7 @@ export default async function AdminLayout({
 }) {
   const snapshot = await getAuthSnapshot();
   if (!snapshot) {
-    redirect("/login");
+    redirect("/login?next=/admin");
   }
 
   if (!snapshot.isMeridianAdmin) {

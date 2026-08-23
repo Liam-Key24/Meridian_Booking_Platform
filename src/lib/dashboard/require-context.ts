@@ -12,7 +12,7 @@ export async function requireDashboardContext(
 ): Promise<BusinessContext | null> {
   const snapshot = await getAuthSnapshot();
   if (!snapshot) {
-    redirect("/login");
+    redirect("/login?next=/dashboard");
   }
 
   return getBusinessContext(businessId);

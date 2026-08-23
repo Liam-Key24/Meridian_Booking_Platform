@@ -2,30 +2,43 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import {
+  GENERIC_AUTH_ERROR,
+  validateLoginCredentials,
+} from "@/lib/auth/login-validation";
+import { resolvePostLoginPath } from "@/lib/auth/safe-redirect";
 
 export type AuthActionState = {
   error: string | null;
+  field?: "email" | "password" | "form" | null;
 };
 
 export async function signIn(
   _prev: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const validation = validateLoginCredentials(
+    formData.get("email"),
+    formData.get("password"),
+  );
 
-  if (!email || !password) {
-    return { error: "Enter your email and password." };
+  if (!validation.ok) {
+    return { error: validation.error, field: validation.field };
   }
+
+  const next = resolvePostLoginPath(formData.get("next"));
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabase.auth.signInWithPassword({
+    email: validation.email,
+    password: validation.password,
+  });
 
   if (error) {
-    return { error: "Invalid email or password." };
+    return { error: GENERIC_AUTH_ERROR, field: "form" };
   }
 
-  redirect("/dashboard");
+  redirect(next);
 }
 
 export async function signOut() {

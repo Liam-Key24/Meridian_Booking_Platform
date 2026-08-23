@@ -19,7 +19,7 @@ export default async function DashboardLayout({
 }) {
   const snapshot = await getAuthSnapshot();
   if (!snapshot) {
-    redirect("/login");
+    redirect("/login?next=/dashboard");
   }
 
   const businessName = snapshot.memberships[0]?.business.name ?? "Meridian";
