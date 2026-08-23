@@ -15,12 +15,13 @@ Secure, multi-tenant booking-request product used by Meridian client sites. The 
 
 ## Current status
 
-**Phase 0** foundation and **Phase 1** multi-tenant security are in progress on feature branches:
+**Phase 0** foundation, **Phase 1** multi-tenant security, and **Phase 2** public booking requests:
 
 - Design tokens and UI primitives
-- Route placeholders + authenticated dashboard shell
+- Authenticated dashboard shell + membership context
 - `businesses`, `profiles`, `business_memberships`
-- RLS + two-business isolation tests
+- Public `/book/[slug]` request form (Pending only) with validation, honeypot, rate limits
+- `booking_settings`, `services`, `bookings`, `booking_events` + RLS
 - Stripe-ready architecture documentation (no Stripe SDK)
 
 ## Local setup

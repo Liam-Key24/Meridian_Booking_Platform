@@ -152,3 +152,52 @@ values
     'active'
   )
 on conflict (business_id, user_id) do nothing;
+
+insert into public.booking_settings (
+  business_id,
+  notification_email,
+  timezone,
+  booking_mode
+)
+values
+  (
+    'a1111111-1111-4111-8111-111111111111',
+    'bookings@business-a.test',
+    'Europe/London',
+    'meridian'
+  ),
+  (
+    'b2222222-2222-4222-8222-222222222222',
+    'bookings@business-b.test',
+    'Europe/London',
+    'meridian'
+  )
+on conflict (business_id) do nothing;
+
+insert into public.services (
+  id,
+  business_id,
+  name,
+  description,
+  duration_minutes,
+  is_active
+)
+values
+  (
+    'c1111111-1111-4111-8111-111111111111',
+    'a1111111-1111-4111-8111-111111111111',
+    'Consultation',
+    'Introductory appointment',
+    60,
+    true
+  ),
+  (
+    'c2222222-2222-4222-8222-222222222222',
+    'b2222222-2222-4222-8222-222222222222',
+    'Table for two',
+    'Evening dining request',
+    90,
+    true
+  )
+on conflict (id) do nothing;
+

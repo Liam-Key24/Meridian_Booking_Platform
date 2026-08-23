@@ -4,6 +4,7 @@
 |------|---------|
 | `20260823000001_multitenant_foundation.sql` | businesses, profiles, business_memberships |
 | `20260823000002_multitenant_rls.sql` | RLS helpers and policies |
+| `20260823000003_public_bookings.sql` | booking_settings, services, bookings, booking_events + RLS |
 
 Apply to **Meridian Platform Development** only:
 
