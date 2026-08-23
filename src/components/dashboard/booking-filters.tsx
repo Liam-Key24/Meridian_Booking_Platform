@@ -5,9 +5,8 @@ import type { BookingStatus } from "@/types/database";
 const statuses: Array<{ value: BookingStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
   { value: "pending", label: "Pending" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "suggested", label: "Suggested time" },
-  { value: "declined", label: "Declined" },
+  { value: "confirmed", label: "Approved" },
+  { value: "suggested", label: "Rescheduled" },
   { value: "cancelled", label: "Cancelled" },
 ];
 

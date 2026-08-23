@@ -16,7 +16,7 @@ const statusConfig: Record<
       "bg-meridian-status-pending-bg text-meridian-status-pending",
   },
   confirmed: {
-    label: "Confirmed",
+    label: "Approved",
     className:
       "bg-meridian-status-confirmed-bg text-meridian-status-confirmed",
   },
@@ -31,7 +31,7 @@ const statusConfig: Record<
       "bg-meridian-status-cancelled-bg text-meridian-status-cancelled",
   },
   suggested: {
-    label: "Suggested time",
+    label: "Rescheduled",
     className:
       "bg-meridian-status-suggested-bg text-meridian-status-suggested",
   },
@@ -47,7 +47,7 @@ export function StatusLabel({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-meridian-sm px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center rounded-meridian-sm px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ring-current/20",
         config.className,
         className,
       )}

@@ -1,16 +1,7 @@
-import Link from "next/link";
-import { signOut } from "@/lib/auth/actions";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
-import { Button } from "@/components/ui";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-
-const nav = [
-  { href: "/dashboard", label: "Pending" },
-  { href: "/dashboard/calendar", label: "Calendar" },
-  { href: "/dashboard/bookings", label: "All bookings" },
-  { href: "/dashboard/bookings/new", label: "New booking" },
-  { href: "/dashboard/settings", label: "Settings" },
-];
 
 export default async function DashboardLayout({
   children,
@@ -22,39 +13,33 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard");
   }
 
-  const businessName = snapshot.memberships[0]?.business.name ?? "Meridian";
+  const membership = snapshot.memberships[0];
+  const business = membership?.business;
+  const businessName = business?.name ?? "Meridian";
+
+  let bookingMode: string | null = null;
+  let publicBookHref: string | null = null;
+
+  if (business) {
+    const supabase = await createClient();
+    const { data: settings } = await supabase
+      .from("booking_settings")
+      .select("booking_mode")
+      .eq("business_id", business.id)
+      .maybeSingle();
+    bookingMode = settings?.booking_mode ?? null;
+    publicBookHref = `/book/${business.slug}`;
+  }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-b border-meridian-border bg-meridian-surface">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-[var(--meridian-space-page)] py-4">
-          <div>
-            <p className="text-xs font-semibold tracking-wide text-meridian-blue uppercase">
-              Meridian
-            </p>
-            <p className="text-lg font-semibold text-meridian-text">
-              {businessName}
-            </p>
-          </div>
-          <nav className="flex flex-wrap items-center gap-2">
-            {nav.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-meridian-sm px-3 py-2 text-sm font-medium text-meridian-text-muted transition-colors hover:bg-meridian-surface-muted hover:text-meridian-text"
-              >
-                {item.label}
-              </Link>
-            ))}
-            <form action={signOut}>
-              <Button type="submit" variant="secondary" size="sm">
-                Sign out
-              </Button>
-            </form>
-          </nav>
-        </div>
-      </header>
-      <div className="flex flex-1 flex-col">{children}</div>
-    </div>
+    <DashboardShell
+      businessName={businessName}
+      businessStatus={business?.status ?? "unknown"}
+      bookingMode={bookingMode}
+      publicBookHref={publicBookHref}
+      userEmail={snapshot.user.email}
+    >
+      {children}
+    </DashboardShell>
   );
 }

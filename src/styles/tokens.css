@@ -21,17 +21,17 @@
   --meridian-text-muted: #5a7580;
   --meridian-text-inverse: #ffffff;
 
-  /* Status */
-  --meridian-status-pending: #c47a12;
-  --meridian-status-pending-bg: #fff4e5;
-  --meridian-status-confirmed: #1a7a5c;
-  --meridian-status-confirmed-bg: #e6f6ef;
-  --meridian-status-declined: #b42318;
-  --meridian-status-declined-bg: #fef3f2;
-  --meridian-status-cancelled: #5a7580;
-  --meridian-status-cancelled-bg: #eef2f4;
-  --meridian-status-suggested: #16697a;
-  --meridian-status-suggested-bg: #e8f4f7;
+  /* Status — distinct readable tints per booking state */
+  --meridian-status-pending: #b45309;
+  --meridian-status-pending-bg: #fef3c7;
+  --meridian-status-confirmed: #047857;
+  --meridian-status-confirmed-bg: #d1fae5;
+  --meridian-status-declined: #b91c1c;
+  --meridian-status-declined-bg: #fee2e2;
+  --meridian-status-cancelled: #57534e;
+  --meridian-status-cancelled-bg: #f5f5f4;
+  --meridian-status-suggested: #0369a1;
+  --meridian-status-suggested-bg: #e0f2fe;
 
   /* Shape & focus */
   --meridian-radius: 20px;

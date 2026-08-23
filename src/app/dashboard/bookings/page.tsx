@@ -1,15 +1,14 @@
+import { EmptyState, ErrorState } from "@/components/ui";
 import {
-  Badge,
-  Card,
-  EmptyState,
-  ErrorState,
-} from "@/components/ui";
-import { BookingFilters } from "@/components/dashboard/booking-filters";
-import { BookingList } from "@/components/dashboard/booking-list";
+  BookingsExplorer,
+  type BookingsPeriod,
+} from "@/components/dashboard/bookings-explorer";
 import {
   listBookingsForBusiness,
   type BookingFilters as Filters,
 } from "@/lib/dashboard/bookings";
+import { resolveWeekRange } from "@/lib/dashboard/analytics-math";
+import { formatLocalDate } from "@/lib/dashboard/calendar";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
 import type { BookingStatus } from "@/types/database";
 
@@ -18,22 +17,64 @@ type PageProps = {
     status?: string;
     from?: string;
     to?: string;
+    q?: string;
+    period?: string;
+    open?: string;
   }>;
 };
 
 function parseStatus(value?: string): Filters["status"] {
-  const allowed: Array<BookingStatus | "all"> = [
-    "all",
+  if (!value || value === "all") return "all";
+  // Friendly URL aliases → DB status values
+  if (value === "approved") return "confirmed";
+  if (value === "rescheduled") return "suggested";
+  const allowed: BookingStatus[] = [
     "pending",
     "confirmed",
-    "declined",
     "cancelled",
     "suggested",
   ];
-  if (value && allowed.includes(value as BookingStatus | "all")) {
-    return value as BookingStatus | "all";
+  if (allowed.includes(value as BookingStatus)) {
+    return value as BookingStatus;
   }
   return "all";
+}
+
+function parsePeriod(value?: string): BookingsPeriod {
+  if (
+    value === "daily" ||
+    value === "weekly" ||
+    value === "monthly" ||
+    value === "custom"
+  ) {
+    return value;
+  }
+  return "weekly";
+}
+
+function resolveListRange(
+  period: BookingsPeriod,
+  fromParam: string,
+  toParam: string,
+): { from?: string; to?: string } {
+  if (period === "custom") {
+    return {
+      from: fromParam || undefined,
+      to: toParam || undefined,
+    };
+  }
+  if (period === "daily") {
+    const today = formatLocalDate(new Date());
+    return { from: today, to: today };
+  }
+  if (period === "weekly") {
+    const week = resolveWeekRange();
+    return { from: week.from, to: week.to };
+  }
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1, 12);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 12);
+  return { from: formatLocalDate(start), to: formatLocalDate(end) };
 }
 
 export default async function DashboardBookingsPage({ searchParams }: PageProps) {
@@ -42,7 +83,7 @@ export default async function DashboardBookingsPage({ searchParams }: PageProps)
 
   if (!context) {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-12">
+      <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8">
         <ErrorState
           title="No business membership"
           description="Your account is signed in but not linked to an active business."
@@ -51,41 +92,50 @@ export default async function DashboardBookingsPage({ searchParams }: PageProps)
     );
   }
 
+  const period = parsePeriod(params.period);
   const status = parseStatus(params.status);
-  const from = params.from ?? "";
-  const to = params.to ?? "";
+  const fromParam = params.from ?? "";
+  const toParam = params.to ?? "";
+  const q = params.q?.trim() ?? "";
+  const openId = params.open?.trim() || null;
+  const range = resolveListRange(period, fromParam, toParam);
 
   const { data: bookings, error } = await listBookingsForBusiness(
     context.business.id,
-    { status, from: from || undefined, to: to || undefined },
+    {
+      status,
+      from: range.from,
+      to: range.to,
+      q: q || undefined,
+    },
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-12">
-      <header className="space-y-2">
-        <Badge tone="blue">Bookings</Badge>
+    <main className="flex w-full flex-1 flex-col gap-6 px-[var(--meridian-space-page)] py-8">
+      <header className="space-y-1">
         <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
           All bookings
         </h1>
-        <p className="text-meridian-text-muted">
-          Filter by status and preferred date for {context.business.name}.
-        </p>
       </header>
 
-      <BookingFilters status={status ?? "all"} from={from} to={to} />
-
-      <Card title="Results" description={`${bookings.length} booking(s)`}>
-        {error ? (
-          <ErrorState title="Could not load bookings" description={error} />
-        ) : bookings.length === 0 ? (
-          <EmptyState
-            title="No bookings match"
-            description="Try clearing filters or wait for new customer requests."
-          />
-        ) : (
-          <BookingList bookings={bookings} />
-        )}
-      </Card>
+      {error && bookings.length === 0 ? (
+        <EmptyState
+          title="Could not load bookings"
+          description={error}
+        />
+      ) : (
+        <BookingsExplorer
+          businessId={context.business.id}
+          bookings={bookings}
+          period={period}
+          status={status ?? "all"}
+          from={period === "custom" ? fromParam : range.from ?? ""}
+          to={period === "custom" ? toParam : range.to ?? ""}
+          q={q}
+          error={error}
+          initialOpenId={openId}
+        />
+      )}
     </main>
   );
 }

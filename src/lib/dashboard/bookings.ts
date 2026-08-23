@@ -11,6 +11,7 @@ export type BookingFilters = {
   status?: BookingStatus | "all";
   from?: string;
   to?: string;
+  q?: string;
 };
 
 export async function listBookingsForBusiness(
@@ -36,6 +37,16 @@ export async function listBookingsForBusiness(
 
   if (filters.to) {
     query = query.lte("preferred_date", filters.to);
+  }
+
+  const q = filters.q?.trim();
+  if (q) {
+    const escaped = q.replace(/[%_,]/g, "");
+    if (escaped) {
+      query = query.or(
+        `customer_name.ilike.%${escaped}%,customer_email.ilike.%${escaped}%`,
+      );
+    }
   }
 
   const { data, error } = await query;

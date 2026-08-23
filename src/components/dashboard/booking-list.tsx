@@ -8,8 +8,8 @@ export function BookingList({ bookings }: { bookings: BookingListItem[] }) {
       {bookings.map((booking) => (
         <li key={booking.id}>
           <Link
-            href={`/dashboard/bookings/${booking.id}`}
-            className="flex flex-col gap-2 px-4 py-4 transition-colors hover:bg-meridian-surface-muted sm:flex-row sm:items-center sm:justify-between"
+            href={`/dashboard/bookings?open=${encodeURIComponent(booking.id)}&period=custom`}
+            className="flex cursor-pointer flex-col gap-2 px-4 py-4 transition-colors hover:bg-meridian-surface-muted sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
