@@ -99,6 +99,8 @@ export async function updateBusinessSettings(
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/calendar");
+  revalidatePath(`/book/${context.business.slug}`);
 
   return { status: "success", message: "Settings saved." };
 }

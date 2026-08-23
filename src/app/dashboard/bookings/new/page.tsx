@@ -4,7 +4,15 @@ import { Badge, Card, ErrorState } from "@/components/ui";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NewManualBookingPage() {
+type PageProps = {
+  searchParams: Promise<{
+    date?: string;
+    time?: string;
+  }>;
+};
+
+export default async function NewManualBookingPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const context = await requireDashboardContext();
 
   if (!context) {
@@ -18,6 +26,15 @@ export default async function NewManualBookingPage() {
     );
   }
 
+  const defaultDate =
+    params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
+      ? params.date
+      : undefined;
+  const defaultTime =
+    params.time && /^\d{2}:\d{2}/.test(params.time)
+      ? params.time.slice(0, 5)
+      : undefined;
+
   const supabase = await createClient();
   const { data: services } = await supabase
     .from("services")
@@ -30,10 +47,10 @@ export default async function NewManualBookingPage() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-12">
       <div className="space-y-2">
         <Link
-          href="/dashboard/bookings"
+          href="/dashboard/calendar"
           className="text-sm font-semibold text-meridian-teal hover:underline"
         >
-          ← All bookings
+          ← Calendar
         </Link>
         <Badge tone="teal">Manual booking</Badge>
         <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
@@ -41,7 +58,7 @@ export default async function NewManualBookingPage() {
         </h1>
         <p className="max-w-xl text-meridian-text-muted">
           Create a confirmed booking for a customer who booked outside the public
-          request form.
+          request form. You can also start from the calendar.
         </p>
       </div>
 
@@ -49,6 +66,8 @@ export default async function NewManualBookingPage() {
         <ManualBookingForm
           businessId={context.business.id}
           services={services ?? []}
+          defaultDate={defaultDate}
+          defaultTime={defaultTime}
         />
       </Card>
     </main>
