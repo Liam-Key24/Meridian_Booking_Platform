@@ -215,29 +215,6 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           )}
         </Card>
       </section>
-
-      <Card title="Quick actions">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/dashboard/bookings?status=pending"
-            className="rounded-meridian bg-meridian-accent px-4 py-2 text-sm font-semibold text-meridian-text"
-          >
-            Review pending
-          </Link>
-          <Link
-            href="/dashboard/calendar"
-            className="rounded-meridian border border-meridian-border px-4 py-2 text-sm font-semibold text-meridian-text"
-          >
-            Open calendar
-          </Link>
-          <Link
-            href="/dashboard/bookings/new"
-            className="rounded-meridian border border-meridian-border px-4 py-2 text-sm font-semibold text-meridian-text"
-          >
-            Add manual booking
-          </Link>
-        </div>
-      </Card>
     </main>
   );
 }
