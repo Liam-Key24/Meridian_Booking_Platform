@@ -107,6 +107,17 @@ export function parseWeeklyHours(value: unknown): WeeklyHours {
   return result;
 }
 
+/** Compact label for today's opening hours, e.g. "Today 09:00–22:00". */
+export function todayOpeningLabel(
+  hours: WeeklyHours,
+  now = new Date(),
+): string {
+  const weekday = WEEKDAYS[(now.getDay() + 6) % 7]!;
+  const day = hours[weekday];
+  if (!day || day.closed) return "Closed today";
+  return `Today ${day.open}–${day.close}`;
+}
+
 export function parseKitchenCloseTimes(value: unknown): KitchenCloseTimes {
   const fallback = defaultKitchenCloseTimes();
   if (!isRecord(value)) return fallback;

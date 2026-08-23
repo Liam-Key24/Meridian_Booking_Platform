@@ -3,26 +3,42 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
+import {
+  CalendarBlank,
+  Clock,
+  EnvelopeSimple,
+  ForkKnife,
+  GearSix,
+  House,
+  Lifebuoy,
+  ListBullets,
+  Phone,
+  PlusCircle,
+  SignOut,
+  UserCircle,
+  type Icon,
+} from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
 import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
-import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 export type DashboardShellProps = {
   businessName: string;
-  businessStatus: string;
-  bookingMode: string | null;
+  notificationEmail: string | null;
+  contactPhone: string | null;
+  openingLabel: string;
+  membershipLabel: string;
   publicBookHref: string | null;
-  userEmail: string | undefined;
+  accountName: string;
+  accountTitle: string;
   children: React.ReactNode;
 };
 
-const nav = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/bookings", label: "Bookings" },
-  { href: "/dashboard/calendar", label: "Calendar" },
-  { href: "/dashboard/bookings/new", label: "New booking" },
-  { href: "/dashboard/settings", label: "Settings" },
+const nav: Array<{ href: string; label: string; icon: Icon }> = [
+  { href: "/dashboard", label: "Dashboard", icon: House },
+  { href: "/dashboard/bookings", label: "Bookings", icon: ListBullets },
+  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarBlank },
+  { href: "/dashboard/bookings/new", label: "New booking", icon: PlusCircle },
 ];
 
 function isActive(pathname: string, href: string): boolean {
@@ -42,10 +58,13 @@ function isActive(pathname: string, href: string): boolean {
 
 export function DashboardShell({
   businessName,
-  businessStatus,
-  bookingMode,
+  notificationEmail,
+  contactPhone,
+  openingLabel,
+  membershipLabel,
   publicBookHref,
-  userEmail,
+  accountName,
+  accountTitle,
   children,
 }: DashboardShellProps) {
   const pathname = usePathname();
@@ -71,7 +90,7 @@ export function DashboardShell({
   })();
 
   const sidebar = (
-    <aside className="flex h-full w-72 flex-col gap-6 border-r border-meridian-border bg-meridian-surface px-5 py-6">
+    <aside className="flex h-full w-72 flex-col gap-5 border-r border-meridian-border bg-meridian-surface px-5 py-6">
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <span className="flex size-10 items-center justify-center rounded-meridian-sm bg-meridian-teal text-sm font-bold text-meridian-text-inverse">
@@ -84,20 +103,64 @@ export function DashboardShell({
             <p className="text-sm font-semibold text-meridian-text">Bookings</p>
           </div>
         </div>
-        <div className="rounded-meridian border border-meridian-border bg-meridian-surface-muted px-3 py-3">
-          <p className="font-semibold text-meridian-text">{businessName}</p>
-          <p className="mt-1 text-xs text-meridian-text-muted capitalize">
-            {businessStatus}
-            {bookingMode ? ` · ${bookingMode}` : ""}
-          </p>
+
+        <div className="space-y-3 rounded-meridian border border-meridian-border bg-meridian-surface-muted px-3 py-3">
+          <div className="space-y-1">
+            <p className="font-semibold text-meridian-text">{businessName}</p>
+            <span className="inline-flex items-center gap-1.5 rounded-meridian-sm bg-meridian-surface px-2 py-1 text-[11px] font-semibold tracking-wide text-meridian-teal uppercase">
+              <ForkKnife className="size-3.5" weight="fill" aria-hidden />
+              {membershipLabel}
+            </span>
+          </div>
+
+          <dl className="space-y-2 text-xs text-meridian-text-muted">
+            <div className="flex items-start gap-2">
+              <EnvelopeSimple
+                className="mt-0.5 size-3.5 shrink-0"
+                weight="regular"
+                aria-hidden
+              />
+              <div>
+                <dt className="sr-only">Email</dt>
+                <dd className="break-all text-meridian-text">
+                  {notificationEmail?.trim() || "—"}
+                </dd>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Phone
+                className="mt-0.5 size-3.5 shrink-0"
+                weight="regular"
+                aria-hidden
+              />
+              <div>
+                <dt className="sr-only">Phone</dt>
+                <dd className="text-meridian-text">
+                  {contactPhone?.trim() || "—"}
+                </dd>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Clock
+                className="mt-0.5 size-3.5 shrink-0"
+                weight="regular"
+                aria-hidden
+              />
+              <div>
+                <dt className="sr-only">Opening times</dt>
+                <dd className="text-meridian-text">{openingLabel}</dd>
+              </div>
+            </div>
+          </dl>
+
           {publicBookHref ? (
             <Link
               href={publicBookHref}
-              className="mt-2 inline-block text-xs font-semibold text-meridian-accent hover:underline"
               target="_blank"
               rel="noopener noreferrer"
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center rounded-meridian bg-meridian-accent px-3 text-xs font-semibold text-meridian-text transition-colors hover:brightness-105"
             >
-              Public booking page
+              View public booking form
             </Link>
           ) : null}
         </div>
@@ -106,19 +169,21 @@ export function DashboardShell({
       <nav className="flex flex-1 flex-col gap-1" aria-label="Dashboard">
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
+          const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
               className={cn(
-                "rounded-meridian-sm px-3 py-2.5 text-sm font-medium transition-colors",
+                "inline-flex cursor-pointer items-center gap-2.5 rounded-meridian-sm px-3 py-2.5 text-sm font-medium transition-colors",
                 active
                   ? "bg-meridian-teal text-meridian-text-inverse"
                   : "text-meridian-text-muted hover:bg-meridian-surface-muted hover:text-meridian-text",
               )}
               aria-current={active ? "page" : undefined}
             >
+              <Icon className="size-4 shrink-0" weight="regular" aria-hidden />
               {item.label}
             </Link>
           );
@@ -126,18 +191,56 @@ export function DashboardShell({
       </nav>
 
       <div className="space-y-3 border-t border-meridian-border pt-4">
-        <a
-          href="mailto:support@meridian.example"
-          className="block rounded-meridian-sm px-3 py-2 text-sm font-medium text-meridian-text-muted hover:bg-meridian-surface-muted hover:text-meridian-text"
-        >
-          Help / support
-        </a>
-        <p className="px-3 text-xs text-meridian-text-muted">{userEmail}</p>
-        <form action={signOut}>
-          <Button type="submit" variant="secondary" size="sm" fullWidth>
-            Sign out
-          </Button>
-        </form>
+        <div className="flex items-center gap-3 px-1">
+          <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-meridian-surface-muted text-meridian-teal">
+            <UserCircle className="size-8" weight="duotone" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-meridian-text">
+              {accountName}
+            </p>
+            <p className="truncate text-xs text-meridian-text-muted">
+              {accountTitle}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Link
+            href="/dashboard/settings"
+            onClick={() => setOpen(false)}
+            className={cn(
+              "inline-flex h-10 cursor-pointer items-center gap-2 rounded-meridian border px-3 text-sm font-semibold transition-colors",
+              pathname.startsWith("/dashboard/settings")
+                ? "border-meridian-teal bg-meridian-teal text-meridian-text-inverse"
+                : "border-meridian-border bg-meridian-surface text-meridian-text hover:border-meridian-accent hover:bg-meridian-surface-muted",
+            )}
+            aria-current={
+              pathname.startsWith("/dashboard/settings") ? "page" : undefined
+            }
+          >
+            <GearSix className="size-4 shrink-0" weight="regular" aria-hidden />
+            Settings
+          </Link>
+
+          <form action={signOut}>
+            <button
+              type="submit"
+              className="inline-flex h-10 w-full cursor-pointer items-center gap-2 rounded-meridian border border-meridian-border bg-meridian-surface px-3 text-sm font-semibold text-meridian-text transition-colors hover:border-meridian-accent hover:bg-meridian-surface-muted"
+            >
+              <SignOut className="size-4 shrink-0" weight="regular" aria-hidden />
+              Sign out
+            </button>
+          </form>
+
+          <a
+            href="mailto:support@meridian.example"
+            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-meridian border border-meridian-border bg-meridian-surface px-3 text-sm font-semibold text-meridian-text transition-colors hover:border-meridian-accent hover:bg-meridian-surface-muted"
+          >
+            <Lifebuoy className="size-4 shrink-0" weight="regular" aria-hidden />
+            Help and support
+          </a>
+        </div>
       </div>
     </aside>
   );
@@ -152,7 +255,7 @@ export function DashboardShell({
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-[#143a44]/40"
+            className="absolute inset-0 cursor-pointer bg-[#143a44]/40"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
           />
@@ -166,7 +269,7 @@ export function DashboardShell({
             <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-meridian-sm border border-meridian-border text-meridian-text lg:hidden"
+                className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-meridian-sm border border-meridian-border text-meridian-text lg:hidden"
                 aria-expanded={open}
                 aria-controls={titleId}
                 onClick={() => setOpen((value) => !value)}
@@ -208,7 +311,7 @@ export function DashboardShell({
               {publicBookHref ? (
                 <Link
                   href={publicBookHref}
-                  className="inline-flex h-11 items-center rounded-meridian border border-meridian-border bg-meridian-surface px-3 text-sm font-semibold text-meridian-text hover:border-meridian-accent sm:px-4"
+                  className="inline-flex h-11 cursor-pointer items-center rounded-meridian border border-meridian-border bg-meridian-surface px-3 text-sm font-semibold text-meridian-text hover:border-meridian-accent sm:px-4"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -217,7 +320,7 @@ export function DashboardShell({
               ) : null}
               <Link
                 href="/dashboard/bookings/new"
-                className="inline-flex h-11 items-center rounded-meridian bg-meridian-accent px-3 text-sm font-semibold text-meridian-text hover:brightness-105 sm:px-4"
+                className="inline-flex h-11 cursor-pointer items-center rounded-meridian bg-meridian-accent px-3 text-sm font-semibold text-meridian-text hover:brightness-105 sm:px-4"
               >
                 Add booking
               </Link>
