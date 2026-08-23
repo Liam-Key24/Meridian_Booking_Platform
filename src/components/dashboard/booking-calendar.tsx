@@ -36,10 +36,6 @@ const TRACK_TEXTURE = {
     "repeating-linear-gradient(45deg, rgba(20,58,68,0.045) 0 1px, transparent 1px 8px)",
 };
 
-function timeLabel(time: string): string {
-  return time.slice(0, 5);
-}
-
 function hourSlot(time: string): string {
   return `${time.slice(0, 2)}:00`;
 }
@@ -85,51 +81,6 @@ function shiftIso(iso: string, days: number): string {
   const mm = String(date.getMonth() + 1).padStart(2, "0");
   const dd = String(date.getDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
-}
-
-function BookingCard({
-  booking,
-  onOpen,
-}: {
-  booking: BookingListItem;
-  onOpen: (booking: BookingListItem) => void;
-}) {
-  const allergy = hasAllergies(booking.allergies);
-  const request = hasRequest(booking);
-
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(booking)}
-      title={
-        allergy
-          ? "Allergies recorded"
-          : request
-            ? "Request added"
-            : booking.customer_name
-      }
-      className={cn(
-        "w-full cursor-pointer rounded-meridian-sm border px-2 py-1.5 text-left transition-colors",
-        allergy
-          ? "border-[color-mix(in_srgb,#e11d48_28%,white)] bg-[color-mix(in_srgb,#e11d48_7%,white)] hover:bg-[color-mix(in_srgb,#e11d48_11%,white)]"
-          : request
-            ? "border-[color-mix(in_srgb,var(--meridian-accent)_38%,white)] bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)] hover:bg-[color-mix(in_srgb,var(--meridian-accent)_20%,white)]"
-            : "border-meridian-border bg-meridian-surface hover:border-meridian-blue hover:bg-meridian-surface-subtle",
-      )}
-    >
-      <p className="truncate text-sm font-medium text-meridian-text">
-        {booking.customer_name}
-      </p>
-      <p className="mt-0.5 flex items-center gap-1.5 text-xs text-meridian-text-muted">
-        <Users className="size-3 shrink-0" weight="regular" aria-hidden />
-        <span className="truncate">{guestsLabel(booking.guest_count)}</span>
-        <span aria-hidden>·</span>
-        <span className="tabular-nums">
-          {timeLabel(booking.preferred_time)}
-        </span>
-      </p>
-    </button>
-  );
 }
 
 export function BookingCalendar({
@@ -276,82 +227,75 @@ function WeekTimeBlocks({
     };
   }, [bookings]);
 
-  const columns = "grid grid-cols-[4.5rem_repeat(7,minmax(0,1fr))]";
+  const columns = "grid grid-cols-[5rem_repeat(7,minmax(0,1fr))] gap-2";
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[56rem] overflow-hidden rounded-meridian border border-meridian-border">
+    <div className="overflow-x-auto pb-1">
+      <div className="min-w-[62rem]">
         <div
-          className={cn(
-            columns,
-            "border-b border-meridian-border bg-meridian-surface-muted",
-          )}
+          className={cn(columns, "rounded-meridian bg-meridian-surface-muted p-2")}
         >
-          <span className="px-3 py-2.5 text-xs font-semibold tracking-wide text-meridian-text-muted uppercase">
+          <span className="flex items-center px-2 text-xs font-semibold tracking-wide text-meridian-text-muted uppercase">
             Time
           </span>
           {days.map((day) => {
             const isToday = day === todayIso;
             return (
-              <div
+              <span
                 key={day}
                 className={cn(
-                  "border-l border-meridian-border px-3 py-2.5",
-                  isToday && "bg-[color-mix(in_srgb,#82c0cc_18%,white)]",
+                  "rounded-meridian-sm px-3 py-1.5 text-center",
+                  isToday
+                    ? "bg-[color-mix(in_srgb,#82c0cc_28%,white)]"
+                    : "bg-meridian-surface",
                 )}
               >
-                <p className="text-xs font-semibold tracking-wide text-meridian-text-muted uppercase">
+                <span className="block text-[10px] font-semibold tracking-wide text-meridian-text-muted uppercase">
                   {weekdayLabel(day)}
-                </p>
-                <p
+                </span>
+                <span
                   className={cn(
-                    "text-sm font-semibold",
+                    "block text-sm font-semibold",
                     isToday ? "text-meridian-teal" : "text-meridian-text",
                   )}
                 >
                   {Number(day.slice(8))}
-                </p>
-              </div>
+                </span>
+              </span>
             );
           })}
         </div>
 
         {slots.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-meridian-text-muted">
+          <p className="mt-2 rounded-meridian-sm bg-meridian-surface-muted px-4 py-10 text-center text-sm text-meridian-text-muted">
             No confirmed bookings this week.
           </p>
         ) : (
-          slots.map((slot, index) => (
-            <div
-              key={slot}
-              className={cn(
-                columns,
-                "border-b border-meridian-border last:border-b-0",
-                index % 2 === 1 && "bg-[color-mix(in_srgb,#82c0cc_8%,white)]",
-              )}
-            >
-              <span className="px-3 py-3 text-xs font-semibold tabular-nums text-meridian-text-muted">
-                {slot}
-              </span>
-              {days.map((day) => {
-                const cards = byDayAndSlot[day]?.[slot] ?? [];
-                return (
-                  <div
-                    key={`${day}-${slot}`}
-                    className="flex flex-col gap-1.5 border-l border-meridian-border p-1.5"
-                  >
-                    {cards.map((booking) => (
-                      <BookingCard
-                        key={booking.id}
-                        booking={booking}
-                        onOpen={onOpen}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          ))
+          <div className="mt-2 space-y-2">
+            {slots.map((slot) => (
+              <div key={slot} className={cn(columns, "items-stretch")}>
+                <span className="flex items-center justify-center rounded-meridian-sm bg-meridian-surface-muted px-3 py-3 text-xs font-semibold tabular-nums text-meridian-text-muted">
+                  {slot}
+                </span>
+                {days.map((day) => {
+                  const cards = byDayAndSlot[day]?.[slot] ?? [];
+                  return (
+                    <div
+                      key={`${day}-${slot}`}
+                      className="flex min-h-[4.25rem] flex-col gap-1.5 rounded-meridian-sm p-1"
+                      style={TRACK_TEXTURE}
+                    >
+                      {cards.map((booking) => (
+                        <div key={booking.id} className="h-[3.25rem]">
+                          <TimelineCard booking={booking} onOpen={onOpen} dense />
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -508,9 +452,11 @@ function DayTableGrid({
 function TimelineCard({
   booking,
   onOpen,
+  dense = false,
 }: {
   booking: BookingListItem;
   onOpen: (booking: BookingListItem) => void;
+  dense?: boolean;
 }) {
   const allergy = hasAllergies(booking.allergies);
   const request = hasRequest(booking);
@@ -548,10 +494,14 @@ function TimelineCard({
         </span>
         <span className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-meridian-text-muted">
           <Users className="size-3 shrink-0" weight="regular" aria-hidden />
-          <span className="truncate">{guestsLabel(booking.guest_count)}</span>
+          <span className="truncate">
+            {dense ? (booking.guest_count ?? "—") : guestsLabel(booking.guest_count)}
+          </span>
           <span aria-hidden>·</span>
           <span className="tabular-nums">
-            {minutesLabel(from)}–{minutesLabel(to)}
+            {dense
+              ? minutesLabel(from)
+              : `${minutesLabel(from)}–${minutesLabel(to)}`}
           </span>
         </span>
       </span>
