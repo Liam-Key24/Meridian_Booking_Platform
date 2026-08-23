@@ -2,6 +2,13 @@ export type BusinessStatus = "active" | "inactive" | "suspended";
 export type MembershipRole = "owner" | "staff";
 export type MembershipStatus = "active" | "inactive";
 export type PlatformRole = "meridian_admin";
+export type BookingStatus =
+  | "pending"
+  | "confirmed"
+  | "declined"
+  | "cancelled"
+  | "suggested";
+export type BookingMode = "meridian" | "external" | "hybrid";
 
 export type Json =
   | string
@@ -113,6 +120,208 @@ export type Database = {
           },
         ];
       };
+      booking_settings: {
+        Row: {
+          id: string;
+          business_id: string;
+          notification_email: string;
+          timezone: string;
+          booking_mode: BookingMode;
+          external_booking_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          notification_email: string;
+          timezone?: string;
+          booking_mode?: BookingMode;
+          external_booking_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          notification_email?: string;
+          timezone?: string;
+          booking_mode?: BookingMode;
+          external_booking_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_settings_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      services: {
+        Row: {
+          id: string;
+          business_id: string;
+          name: string;
+          description: string | null;
+          duration_minutes: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          name: string;
+          description?: string | null;
+          duration_minutes?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          name?: string;
+          description?: string | null;
+          duration_minutes?: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "services_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      bookings: {
+        Row: {
+          id: string;
+          business_id: string;
+          service_id: string | null;
+          customer_name: string;
+          customer_email: string;
+          customer_phone: string | null;
+          preferred_date: string;
+          preferred_time: string;
+          guest_count: number | null;
+          notes: string | null;
+          status: BookingStatus;
+          suggested_date: string | null;
+          suggested_time: string | null;
+          privacy_consent_at: string | null;
+          confirmed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          service_id?: string | null;
+          customer_name: string;
+          customer_email: string;
+          customer_phone?: string | null;
+          preferred_date: string;
+          preferred_time: string;
+          guest_count?: number | null;
+          notes?: string | null;
+          status?: BookingStatus;
+          suggested_date?: string | null;
+          suggested_time?: string | null;
+          privacy_consent_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          service_id?: string | null;
+          customer_name?: string;
+          customer_email?: string;
+          customer_phone?: string | null;
+          preferred_date?: string;
+          preferred_time?: string;
+          guest_count?: number | null;
+          notes?: string | null;
+          status?: BookingStatus;
+          suggested_date?: string | null;
+          suggested_time?: string | null;
+          privacy_consent_at?: string | null;
+          confirmed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "bookings_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      booking_events: {
+        Row: {
+          id: string;
+          business_id: string;
+          booking_id: string;
+          event_type: string;
+          actor_user_id: string | null;
+          payload: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          booking_id: string;
+          event_type: string;
+          actor_user_id?: string | null;
+          payload?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          booking_id?: string;
+          event_type?: string;
+          actor_user_id?: string | null;
+          payload?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "booking_events_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "booking_events_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -131,6 +340,8 @@ export type Database = {
       membership_role: MembershipRole;
       membership_status: MembershipStatus;
       platform_role: PlatformRole;
+      booking_status: BookingStatus;
+      booking_mode: BookingMode;
     };
     CompositeTypes: Record<string, never>;
   };
