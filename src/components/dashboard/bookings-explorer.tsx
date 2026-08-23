@@ -1,15 +1,16 @@
 "use client";
 
+import { ArrowUpRight } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useId, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
+import {
+  AllergyTagStack,
+  hasAllergies,
+} from "@/components/dashboard/allergy-tags";
+import { BookingDetailPanel } from "@/components/dashboard/booking-detail-panel";
 import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import { StatusLabel, Button } from "@/components/ui";
-import {
-  cancelBooking,
-  declineBooking,
-  type BookingActionState,
-} from "@/lib/dashboard/booking-actions";
 import { cn } from "@/lib/cn";
 import type { BookingListItem } from "@/lib/dashboard/bookings";
 import type { BookingStatus } from "@/types/database";
@@ -25,14 +26,14 @@ type BookingsExplorerProps = {
   to: string;
   q: string;
   error: string | null;
+  initialOpenId?: string | null;
 };
 
 const statuses: Array<{ value: BookingStatus | "all"; label: string }> = [
   { value: "all", label: "All statuses" },
   { value: "pending", label: "Pending" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "suggested", label: "Suggested" },
-  { value: "declined", label: "Declined" },
+  { value: "confirmed", label: "Approved" },
+  { value: "suggested", label: "Rescheduled" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -43,11 +44,26 @@ const periodOptions: BookingsPeriod[] = [
   "custom",
 ];
 
-const initialAction: BookingActionState = { status: "idle", message: null };
-
-const selectChevronClass =
-  "appearance-none bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat pr-9 pl-2.5 " +
-  "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 20 20%22%3E%3Cpath stroke=%22%235a7580%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%221.5%22 d=%22m6 8 4 4 4-4%22/%3E%3C/svg%3E')]";
+function StatusChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="m6 8 4 4 4-4"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
 
 function seatsValue(guestCount: number | null): string {
   return guestCount == null ? "—" : String(guestCount);
@@ -56,20 +72,6 @@ function seatsValue(guestCount: number | null): string {
 function tableValue(assignedTable: string | null | undefined): string {
   const value = assignedTable?.trim();
   return value ? value : "—";
-}
-
-function formatWhen(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
 }
 
 export function BookingsExplorer({
@@ -81,11 +83,19 @@ export function BookingsExplorer({
   to,
   q,
   error,
+  initialOpenId = null,
 }: BookingsExplorerProps) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialOpenId);
+  const [openFromUrl, setOpenFromUrl] = useState(initialOpenId);
   const [pendingNav, startTransition] = useTransition();
   const titleId = useId();
+
+  if (initialOpenId !== openFromUrl) {
+    setOpenFromUrl(initialOpenId);
+    if (initialOpenId) setSelectedId(initialOpenId);
+  }
+
   const selected =
     selectedId == null
       ? null
@@ -127,7 +137,7 @@ export function BookingsExplorer({
                 key={option}
                 href={periodHref(option)}
                 className={cn(
-                  "rounded-[10px] px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
+                  "cursor-pointer rounded-[10px] px-3 py-1.5 text-xs font-semibold capitalize transition-colors",
                   active
                     ? "bg-meridian-accent text-meridian-text"
                     : "text-meridian-text-muted hover:text-meridian-text",
@@ -148,28 +158,11 @@ export function BookingsExplorer({
       <form
         method="get"
         action="/dashboard/bookings"
-        className="flex flex-wrap items-end gap-2 rounded-meridian border border-meridian-border bg-meridian-surface px-3 py-2.5"
+        className="flex flex-col gap-3 rounded-meridian border border-meridian-border bg-meridian-surface px-3 py-2.5 sm:flex-row sm:items-end sm:justify-between"
         onSubmit={() => startTransition(() => undefined)}
       >
         <input type="hidden" name="period" value={period} />
-        <label className="flex min-w-[8rem] flex-col gap-1 text-xs font-medium text-meridian-text-muted">
-          Status
-          <select
-            name="status"
-            defaultValue={status}
-            className={cn(
-              "h-9 rounded-meridian-sm border border-meridian-border bg-meridian-surface text-sm text-meridian-text",
-              selectChevronClass,
-            )}
-          >
-            {statuses.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="flex min-w-[12rem] flex-1 flex-col gap-1 text-xs font-medium text-meridian-text-muted">
+        <div className="flex w-full max-w-xs flex-col gap-1 text-xs font-medium text-meridian-text-muted sm:max-w-sm">
           <span>Search</span>
           <BookingSearchAutocomplete
             key={q}
@@ -185,41 +178,61 @@ export function BookingsExplorer({
                 setSelectedId(hit.id);
                 return;
               }
-              router.push(`/dashboard/bookings/${hit.id}`);
+              router.push(`/dashboard/bookings?open=${hit.id}&period=custom`);
             }}
           />
         </div>
-        {period === "custom" ? (
-          <>
-            <label className="flex flex-col gap-1 text-xs font-medium text-meridian-text-muted">
-              From
-              <input
-                name="from"
-                type="date"
-                defaultValue={from}
-                className="h-9 rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-sm text-meridian-text"
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-medium text-meridian-text-muted">
-              To
-              <input
-                name="to"
-                type="date"
-                defaultValue={to}
-                className="h-9 rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-sm text-meridian-text"
-              />
-            </label>
-          </>
-        ) : null}
-        <Button type="submit" size="sm">
-          Apply
-        </Button>
+        <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+          <label className="relative flex w-full flex-col gap-1 text-xs font-medium text-meridian-text-muted sm:w-[10.5rem]">
+            Status
+            <span className="relative block">
+              <select
+                name="status"
+                defaultValue={status}
+                className="h-9 w-full cursor-pointer appearance-none rounded-meridian-sm border border-meridian-border bg-meridian-surface py-0 pr-9 pl-2.5 text-sm text-meridian-text"
+              >
+                {statuses.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <StatusChevronIcon className="pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-meridian-text-muted" />
+            </span>
+          </label>
+          {period === "custom" ? (
+            <>
+              <label className="flex flex-col gap-1 text-xs font-medium text-meridian-text-muted">
+                From
+                <input
+                  name="from"
+                  type="date"
+                  defaultValue={from}
+                  className="h-9 cursor-pointer rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-sm text-meridian-text"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs font-medium text-meridian-text-muted">
+                To
+                <input
+                  name="to"
+                  type="date"
+                  defaultValue={to}
+                  className="h-9 cursor-pointer rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-sm text-meridian-text"
+                />
+              </label>
+            </>
+          ) : null}
+          <Button type="submit" size="sm">
+            Apply
+          </Button>
+        </div>
       </form>
 
       <div className="overflow-hidden rounded-meridian border border-meridian-border bg-meridian-surface">
-        <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] gap-3 border-b border-meridian-border bg-meridian-surface-muted px-4 py-2.5 pr-5 text-xs font-semibold tracking-wide text-meridian-text-muted uppercase sm:grid-cols-[3.5rem_minmax(0,1.2fr)_6.5rem_7rem_1.75rem]">
+        <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(4.5rem,0.9fr)_auto] gap-3 border-b border-meridian-border bg-meridian-surface-muted px-4 py-2.5 pr-5 text-xs font-semibold tracking-wide text-meridian-text-muted uppercase sm:grid-cols-[3.5rem_minmax(0,1.1fr)_minmax(7rem,1.2fr)_5.5rem_6.5rem_1.75rem]">
           <span>Seats</span>
           <span>Name</span>
+          <span>Allergy</span>
           <span className="hidden sm:block">Table</span>
           <span className="hidden sm:block">Status</span>
           <span className="sr-only">Open</span>
@@ -234,18 +247,24 @@ export function BookingsExplorer({
           </p>
         ) : (
           <ul className="divide-y divide-meridian-border">
-            {bookings.map((booking) => {
+            {bookings.map((booking, index) => {
               const active = booking.id === selectedId;
+              const allergyAlert = hasAllergies(booking.allergies);
+              const zebra = index % 2 === 1;
               return (
                 <li key={booking.id}>
                   <button
                     type="button"
                     onClick={() => setSelectedId(booking.id)}
                     className={cn(
-                      "grid w-full grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 pr-5 text-left transition-colors sm:grid-cols-[3.5rem_minmax(0,1.2fr)_6.5rem_7rem_1.75rem]",
+                      "grid w-full cursor-pointer grid-cols-[3.5rem_minmax(0,1fr)_minmax(4.5rem,0.9fr)_auto] items-center gap-3 px-4 py-3.5 pr-5 text-left transition-colors sm:grid-cols-[3.5rem_minmax(0,1.1fr)_minmax(7rem,1.2fr)_5.5rem_6.5rem_1.75rem]",
                       active
                         ? "bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
-                        : "hover:bg-meridian-surface-muted",
+                        : allergyAlert
+                          ? "bg-[color-mix(in_srgb,#e11d48_4.5%,white)] hover:bg-[color-mix(in_srgb,#e11d48_8%,white)]"
+                          : zebra
+                            ? "bg-[color-mix(in_srgb,#82C0CC_15%,white)] hover:bg-[color-mix(in_srgb,#82C0CC_22%,white)]"
+                            : "bg-white hover:bg-meridian-surface-muted",
                     )}
                   >
                     <span className="text-sm font-semibold text-meridian-text tabular-nums">
@@ -260,18 +279,21 @@ export function BookingsExplorer({
                         <StatusLabel status={booking.status} />
                       </span>
                     </span>
+                    <AllergyTagStack
+                      allergies={booking.allergies}
+                      className="min-w-0"
+                    />
                     <span className="hidden truncate text-sm text-meridian-text sm:block">
                       {tableValue(booking.assigned_table)}
                     </span>
                     <span className="hidden sm:flex">
                       <StatusLabel status={booking.status} />
                     </span>
-                    <span
-                      className="justify-self-end text-lg leading-none text-meridian-accent"
+                    <ArrowUpRight
+                      className="size-4 justify-self-end text-meridian-blue"
+                      weight="bold"
                       aria-hidden
-                    >
-                      ›
-                    </span>
+                    />
                   </button>
                 </li>
               );
@@ -287,188 +309,12 @@ export function BookingsExplorer({
           booking={selected}
           titleId={titleId}
           onClose={() => setSelectedId(null)}
-          onCancelled={() => {
+          onChanged={() => {
             setSelectedId(null);
             router.refresh();
           }}
         />
       ) : null}
-    </div>
-  );
-}
-
-function BookingDetailPanel({
-  businessId,
-  booking,
-  titleId,
-  onClose,
-  onCancelled,
-}: {
-  businessId: string;
-  booking: BookingListItem;
-  titleId: string;
-  onClose: () => void;
-  onCancelled: () => void;
-}) {
-  const [cancelState, cancelAction, cancelPending] = useActionState(
-    cancelBooking,
-    initialAction,
-  );
-  const [declineState, declineAction, declinePending] = useActionState(
-    declineBooking,
-    initialAction,
-  );
-
-  useEffect(() => {
-    if (cancelState.status === "success" || declineState.status === "success") {
-      onCancelled();
-    }
-    // Intentionally only react to action results.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cancelState.status, declineState.status]);
-
-  const canCancelConfirmed = booking.status === "confirmed";
-  const canCancelPending =
-    booking.status === "pending" || booking.status === "suggested";
-  const feedback =
-    [cancelState, declineState].find((state) => state.status !== "idle") ??
-    null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end p-3 sm:p-5 lg:p-8">
-      <button
-        type="button"
-        className="absolute inset-0 bg-[#143a44]/45 backdrop-blur-[2px]"
-        aria-label="Close booking details"
-        onClick={onClose}
-      />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="relative z-10 flex h-full w-full max-w-md flex-col overflow-hidden rounded-meridian border border-meridian-border bg-meridian-surface shadow-[0_24px_80px_rgba(20,58,68,0.28)]"
-      >
-        <header className="flex items-start justify-between gap-3 border-b border-meridian-border px-5 py-4">
-          <div className="min-w-0 space-y-2">
-            <StatusLabel status={booking.status} />
-            <h2
-              id={titleId}
-              className="truncate text-xl font-semibold tracking-tight text-meridian-text"
-            >
-              {booking.customer_name}
-            </h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-meridian-sm border border-meridian-border text-meridian-text-muted hover:bg-meridian-surface-muted hover:text-meridian-text"
-            aria-label="Close"
-          >
-            ×
-          </button>
-        </header>
-
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-          <dl className="space-y-4 text-sm">
-            <DetailRow label="Seats" value={seatsValue(booking.guest_count)} />
-            <DetailRow
-              label="Table assigned"
-              value={tableValue(booking.assigned_table)}
-            />
-            <DetailRow label="Email" value={booking.customer_email} />
-            <DetailRow
-              label="Phone"
-              value={booking.customer_phone || "—"}
-            />
-            <DetailRow
-              label="Service"
-              value={booking.service?.name ?? "Service removed"}
-            />
-            <DetailRow
-              label="Booking time"
-              value={`${booking.preferred_date} at ${booking.preferred_time.slice(0, 5)}`}
-            />
-            {booking.suggested_date ? (
-              <DetailRow
-                label="Suggested time"
-                value={`${booking.suggested_date} at ${(booking.suggested_time ?? "").slice(0, 5)}`}
-              />
-            ) : null}
-            <DetailRow
-              label="Created"
-              value={formatWhen(booking.created_at)}
-            />
-            <DetailRow
-              label="Request notes"
-              value={booking.notes?.trim() || "—"}
-            />
-          </dl>
-
-          {feedback ? (
-            <p
-              className={
-                feedback.status === "error"
-                  ? "text-sm text-meridian-status-declined"
-                  : "text-sm text-meridian-teal"
-              }
-              role="status"
-            >
-              {feedback.message}
-            </p>
-          ) : null}
-        </div>
-
-        <footer className="space-y-2 border-t border-meridian-border px-5 py-4">
-          {canCancelConfirmed ? (
-            <form action={cancelAction}>
-              <input type="hidden" name="businessId" value={businessId} />
-              <input type="hidden" name="bookingId" value={booking.id} />
-              <Button
-                type="submit"
-                variant="danger"
-                fullWidth
-                disabled={cancelPending}
-              >
-                {cancelPending ? "Cancelling…" : "Cancel booking"}
-              </Button>
-            </form>
-          ) : null}
-          {canCancelPending ? (
-            <form action={declineAction}>
-              <input type="hidden" name="businessId" value={businessId} />
-              <input type="hidden" name="bookingId" value={booking.id} />
-              <Button
-                type="submit"
-                variant="danger"
-                fullWidth
-                disabled={declinePending}
-              >
-                {declinePending ? "Cancelling…" : "Cancel request"}
-              </Button>
-            </form>
-          ) : null}
-          <Button type="button" variant="secondary" fullWidth onClick={onClose}>
-            Close
-          </Button>
-          <Link
-            href={`/dashboard/bookings/${booking.id}`}
-            className="block text-center text-xs font-semibold text-meridian-accent hover:underline"
-          >
-            Open full booking page
-          </Link>
-        </footer>
-      </aside>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs font-semibold tracking-wide text-meridian-text-muted uppercase">
-        {label}
-      </dt>
-      <dd className="mt-1 whitespace-pre-wrap text-meridian-text">{value}</dd>
     </div>
   );
 }

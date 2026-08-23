@@ -164,8 +164,8 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
                 >
                   <div>
                     <Link
-                      href={`/dashboard/bookings/${booking.id}`}
-                      className="font-medium text-meridian-text hover:text-meridian-accent"
+                      href={`/dashboard/bookings?open=${encodeURIComponent(booking.id)}&period=custom`}
+                      className="cursor-pointer font-medium text-meridian-text hover:text-meridian-accent"
                     >
                       {booking.customer_name}
                     </Link>
@@ -197,8 +197,8 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
                 >
                   <div>
                     <Link
-                      href={`/dashboard/bookings/${booking.id}`}
-                      className="font-medium text-meridian-text hover:text-meridian-accent"
+                      href={`/dashboard/bookings?open=${encodeURIComponent(booking.id)}&period=custom`}
+                      className="cursor-pointer font-medium text-meridian-text hover:text-meridian-accent"
                     >
                       {booking.customer_name}
                     </Link>

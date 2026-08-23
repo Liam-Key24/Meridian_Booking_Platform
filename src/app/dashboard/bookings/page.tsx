@@ -19,20 +19,23 @@ type PageProps = {
     to?: string;
     q?: string;
     period?: string;
+    open?: string;
   }>;
 };
 
 function parseStatus(value?: string): Filters["status"] {
-  const allowed: Array<BookingStatus | "all"> = [
-    "all",
+  if (!value || value === "all") return "all";
+  // Friendly URL aliases → DB status values
+  if (value === "approved") return "confirmed";
+  if (value === "rescheduled") return "suggested";
+  const allowed: BookingStatus[] = [
     "pending",
     "confirmed",
-    "declined",
     "cancelled",
     "suggested",
   ];
-  if (value && allowed.includes(value as BookingStatus | "all")) {
-    return value as BookingStatus | "all";
+  if (allowed.includes(value as BookingStatus)) {
+    return value as BookingStatus;
   }
   return "all";
 }
@@ -94,6 +97,7 @@ export default async function DashboardBookingsPage({ searchParams }: PageProps)
   const fromParam = params.from ?? "";
   const toParam = params.to ?? "";
   const q = params.q?.trim() ?? "";
+  const openId = params.open?.trim() || null;
   const range = resolveListRange(period, fromParam, toParam);
 
   const { data: bookings, error } = await listBookingsForBusiness(
@@ -129,6 +133,7 @@ export default async function DashboardBookingsPage({ searchParams }: PageProps)
           to={period === "custom" ? toParam : range.to ?? ""}
           q={q}
           error={error}
+          initialOpenId={openId}
         />
       )}
     </main>

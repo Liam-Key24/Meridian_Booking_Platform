@@ -9,6 +9,7 @@ import {
   sendBookingSuggestedEmail,
 } from "@/lib/booking/decision-emails";
 import { getBusinessContext } from "@/lib/auth/business-context";
+import { normalizeAllergies } from "@/lib/allergies";
 import { createClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/types/database";
 
@@ -448,6 +449,87 @@ export async function cancelBooking(
   return { status: "success", message: "Booking cancelled." };
 }
 
+export async function updateBookingDetails(
+  _prev: BookingActionState,
+  formData: FormData,
+): Promise<BookingActionState> {
+  const businessId = String(formData.get("businessId") ?? "");
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const preferredDate = String(formData.get("preferredDate") ?? "").trim();
+  const preferredTime = String(formData.get("preferredTime") ?? "").trim();
+  const guestCountRaw = String(formData.get("guestCount") ?? "").trim();
+  const assignedTable =
+    String(formData.get("assignedTable") ?? "").trim() || null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const allergies = normalizeAllergies(
+    String(formData.get("allergies") ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+
+  const { error: authError, context } = await requireMemberContext(businessId);
+  if (authError || !context) {
+    return { status: "error", message: authError ?? "Not authorised." };
+  }
+
+  const loaded = await loadBookingBundle(businessId, bookingId);
+  if (loaded.error || !loaded.booking) {
+    return { status: "error", message: loaded.error ?? "Booking not found." };
+  }
+
+  if (!DATE_RE.test(preferredDate) || !TIME_RE.test(preferredTime)) {
+    return { status: "error", message: "Enter a valid date and time." };
+  }
+
+  const guestCount = Number.parseInt(guestCountRaw || "1", 10);
+  if (!Number.isFinite(guestCount) || guestCount < 1) {
+    return { status: "error", message: "Guest count must be at least 1." };
+  }
+
+  const normalisedTime =
+    preferredTime.length === 5 ? `${preferredTime}:00` : preferredTime;
+
+  const supabase = await createClient();
+  const { data: updated, error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      preferred_date: preferredDate,
+      preferred_time: normalisedTime,
+      guest_count: guestCount,
+      assigned_table: assignedTable,
+      notes,
+      allergies,
+    })
+    .eq("id", bookingId)
+    .eq("business_id", businessId)
+    .select("id")
+    .maybeSingle();
+
+  if (updateError || !updated) {
+    console.error("[booking-actions] update details", updateError);
+    return { status: "error", message: "Could not save booking changes." };
+  }
+
+  await writeHistory({
+    businessId,
+    bookingId,
+    actorUserId: context.user.id,
+    eventType: "booking.updated",
+    auditAction: "booking.update",
+    payload: {
+      preferred_date: preferredDate,
+      preferred_time: normalisedTime,
+      guest_count: guestCount,
+      assigned_table: assignedTable,
+      allergies,
+    },
+  });
+
+  revalidateBookingPaths(bookingId);
+  return { status: "success", message: "Booking updated." };
+}
+
 export async function createManualBooking(
   _prev: BookingActionState,
   formData: FormData,
@@ -575,5 +657,7 @@ export async function createManualBooking(
   }
 
   revalidateBookingPaths(booking.id);
-  redirect(`/dashboard/bookings/${booking.id}`);
+  redirect(
+    `/dashboard/bookings?open=${encodeURIComponent(booking.id)}&period=custom`,
+  );
 }

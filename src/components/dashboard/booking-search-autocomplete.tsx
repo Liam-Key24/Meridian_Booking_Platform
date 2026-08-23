@@ -81,7 +81,7 @@ export function BookingSearchAutocomplete({
       onSelectHit(hit);
       return;
     }
-    router.push(`/dashboard/bookings/${hit.id}`);
+    router.push(`/dashboard/bookings?open=${encodeURIComponent(hit.id)}&period=custom`);
   };
 
   const heightClass = size === "sm" ? "h-9 text-sm" : "h-11 text-sm";

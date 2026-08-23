@@ -22,8 +22,8 @@ function timeLabel(time: string): string {
 function BookingChip({ booking }: { booking: BookingListItem }) {
   return (
     <Link
-      href={`/dashboard/bookings/${booking.id}`}
-      className="block rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2.5 py-2 transition-colors hover:border-meridian-blue hover:bg-meridian-surface-subtle"
+      href={`/dashboard/bookings?open=${encodeURIComponent(booking.id)}&period=custom`}
+      className="block cursor-pointer rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2.5 py-2 transition-colors hover:border-meridian-blue hover:bg-meridian-surface-subtle"
     >
       <p className="text-xs font-semibold text-meridian-teal">
         {timeLabel(booking.preferred_time)}
