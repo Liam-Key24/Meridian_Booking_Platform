@@ -22,6 +22,7 @@ type BookingCalendarProps = {
   days: string[];
   bookings: BookingListItem[];
   todayIso: string;
+  rangeLabel: string;
 };
 
 /** Settings will supply the real table plan; a single table is the default. */
@@ -90,6 +91,7 @@ export function BookingCalendar({
   days,
   bookings,
   todayIso,
+  rangeLabel,
 }: BookingCalendarProps) {
   const router = useRouter();
   const titleId = useId();
@@ -110,54 +112,71 @@ export function BookingCalendar({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Link
-            href={prevHref}
-            aria-label={view === "day" ? "Previous day" : "Previous week"}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-full border border-meridian-border text-meridian-text-muted transition-colors hover:border-meridian-blue hover:text-meridian-text"
-          >
-            <CaretLeft className="size-4" weight="bold" aria-hidden />
-          </Link>
-          <Link
-            href={`/dashboard/calendar?view=${view}&date=${todayIso}`}
-            className="cursor-pointer rounded-meridian-sm border border-meridian-border px-3 py-1.5 text-sm font-medium text-meridian-text transition-colors hover:bg-meridian-surface-subtle"
-          >
-            Today
-          </Link>
-          <Link
-            href={nextHref}
-            aria-label={view === "day" ? "Next day" : "Next week"}
-            className="inline-flex size-9 cursor-pointer items-center justify-center rounded-full border border-meridian-border text-meridian-text-muted transition-colors hover:border-meridian-blue hover:text-meridian-text"
-          >
-            <CaretRight className="size-4" weight="bold" aria-hidden />
-          </Link>
+      <div className="space-y-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold text-meridian-text">
+            {view === "day" ? "Day view" : "Week view"}
+          </h3>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 rounded-meridian-sm bg-meridian-surface-muted p-1">
+              <Link
+                href={prevHref}
+                aria-label={view === "day" ? "Previous day" : "Previous week"}
+                className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full text-meridian-text-muted transition-colors hover:bg-meridian-surface hover:text-meridian-text"
+              >
+                <CaretLeft className="size-4" weight="bold" aria-hidden />
+              </Link>
+              <span className="rounded-meridian-sm bg-meridian-surface px-3 py-1 text-sm font-semibold text-meridian-text">
+                {rangeLabel}
+              </span>
+              <Link
+                href={nextHref}
+                aria-label={view === "day" ? "Next day" : "Next week"}
+                className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full text-meridian-text-muted transition-colors hover:bg-meridian-surface hover:text-meridian-text"
+              >
+                <CaretRight className="size-4" weight="bold" aria-hidden />
+              </Link>
+            </div>
+
+            <Link
+              href={`/dashboard/calendar?view=${view}&date=${todayIso}`}
+              className="cursor-pointer rounded-meridian-sm bg-meridian-surface-muted px-3 py-1.5 text-sm font-medium text-meridian-text transition-colors hover:bg-meridian-surface-subtle"
+            >
+              Today
+            </Link>
+
+            <div
+              className="inline-flex rounded-meridian-sm bg-meridian-surface-muted p-0.5"
+              role="group"
+              aria-label="Calendar view"
+            >
+              {(["day", "week"] as CalendarView[]).map((option) => {
+                const active = view === option;
+                return (
+                  <Link
+                    key={option}
+                    href={`/dashboard/calendar?view=${option}&date=${anchorDate}`}
+                    aria-current={active ? "true" : undefined}
+                    className={cn(
+                      "cursor-pointer rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors",
+                      active
+                        ? "bg-meridian-accent text-meridian-text"
+                        : "text-meridian-text-muted hover:text-meridian-text",
+                    )}
+                  >
+                    {option === "day" ? "Day" : "Weekly"}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        <div
-          className="inline-flex rounded-meridian-sm border border-meridian-border bg-meridian-surface p-0.5"
-          role="group"
-          aria-label="Calendar view"
-        >
-          {(["day", "week"] as CalendarView[]).map((option) => {
-            const active = view === option;
-            return (
-              <Link
-                key={option}
-                href={`/dashboard/calendar?view=${option}&date=${anchorDate}`}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "cursor-pointer rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors",
-                  active
-                    ? "bg-meridian-accent text-meridian-text"
-                    : "text-meridian-text-muted hover:text-meridian-text",
-                )}
-              >
-                {option === "day" ? "Day" : "Weekly"}
-              </Link>
-            );
-          })}
-        </div>
+        <p className="text-sm text-meridian-text-muted">
+          Confirmed bookings only — no live availability or external calendar
+          sync.
+        </p>
       </div>
 
       {view === "day" ? (
