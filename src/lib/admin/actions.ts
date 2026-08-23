@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
+import { validateExternalBookingUrl } from "@/lib/booking/external-url";
 import type {
   BookingMode,
   BusinessStatus,
@@ -315,6 +316,15 @@ export async function updateAdminBookingSettings(
     };
   }
 
+  let safeExternalUrl: string | null = null;
+  if (bookingMode !== "meridian") {
+    const validatedUrl = validateExternalBookingUrl(externalBookingUrl);
+    if (!validatedUrl.ok) {
+      return { status: "error", message: validatedUrl.error };
+    }
+    safeExternalUrl = validatedUrl.url;
+  }
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("booking_settings")
@@ -322,8 +332,7 @@ export async function updateAdminBookingSettings(
       notification_email: notificationEmail,
       timezone,
       booking_mode: bookingMode,
-      external_booking_url:
-        bookingMode === "meridian" ? null : externalBookingUrl,
+      external_booking_url: safeExternalUrl,
     })
     .eq("business_id", businessId);
 

@@ -82,3 +82,19 @@ describe("Phase 6 admin ops", () => {
     );
   });
 });
+
+describe("booking hardening migration", () => {
+  const sql = readMigrations();
+
+  it("adds idempotency_key unique per business", () => {
+    expect(sql).toMatch(/idempotency_key/);
+    expect(sql).toMatch(/bookings_business_idempotency_key_uidx/);
+  });
+
+  it("adds email operation_key and attempt tracking", () => {
+    expect(sql).toMatch(/operation_key/);
+    expect(sql).toMatch(/attempt_count/);
+    expect(sql).toMatch(/last_attempt_at/);
+    expect(sql).toMatch(/email_delivery_logs_operation_key_uidx/);
+  });
+});

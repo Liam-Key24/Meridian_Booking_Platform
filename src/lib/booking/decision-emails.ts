@@ -2,7 +2,7 @@ import "server-only";
 
 import { Resend } from "resend";
 import { buildBookingIcs } from "@/lib/booking/ics";
-import { logEmailDelivery } from "@/lib/booking/email-log";
+import { logEmailDelivery, wasEmailAlreadySent } from "@/lib/booking/email-log";
 
 type BasePayload = {
   businessId: string;
@@ -53,6 +53,16 @@ async function recordDecisionEmail(params: {
 export async function sendBookingConfirmedEmail(
   payload: BasePayload,
 ): Promise<boolean> {
+  if (
+    await wasEmailAlreadySent({
+      emailType: "booking.confirmed",
+      bookingId: payload.bookingId,
+      recipientEmail: payload.customerEmail,
+    })
+  ) {
+    return true;
+  }
+
   const resend = getResendClient();
   if (!resend) {
     console.info("[email] RESEND_API_KEY not set — skipping confirmation email");
@@ -119,6 +129,16 @@ export async function sendBookingConfirmedEmail(
 export async function sendBookingDeclinedEmail(
   payload: BasePayload & { reason?: string | null },
 ): Promise<boolean> {
+  if (
+    await wasEmailAlreadySent({
+      emailType: "booking.declined",
+      bookingId: payload.bookingId,
+      recipientEmail: payload.customerEmail,
+    })
+  ) {
+    return true;
+  }
+
   const resend = getResendClient();
   if (!resend) {
     await recordDecisionEmail({
@@ -170,6 +190,16 @@ export async function sendBookingSuggestedEmail(
     suggestedTime: string;
   },
 ): Promise<boolean> {
+  if (
+    await wasEmailAlreadySent({
+      emailType: "booking.suggested",
+      bookingId: payload.bookingId,
+      recipientEmail: payload.customerEmail,
+    })
+  ) {
+    return true;
+  }
+
   const resend = getResendClient();
   if (!resend) {
     await recordDecisionEmail({
@@ -215,6 +245,16 @@ export async function sendBookingSuggestedEmail(
 export async function sendBookingCancelledEmail(
   payload: BasePayload,
 ): Promise<boolean> {
+  if (
+    await wasEmailAlreadySent({
+      emailType: "booking.cancelled",
+      bookingId: payload.bookingId,
+      recipientEmail: payload.customerEmail,
+    })
+  ) {
+    return true;
+  }
+
   const resend = getResendClient();
   if (!resend) {
     await recordDecisionEmail({

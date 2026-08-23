@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getBusinessContext } from "@/lib/auth/business-context";
+import { validateExternalBookingUrl } from "@/lib/booking/external-url";
 import type { BookingMode } from "@/types/database";
 
 export type SettingsActionState = {
@@ -69,6 +70,15 @@ export async function updateBusinessSettings(
     };
   }
 
+  let safeExternalUrl: string | null = null;
+  if (bookingMode !== "meridian") {
+    const validatedUrl = validateExternalBookingUrl(externalBookingUrl);
+    if (!validatedUrl.ok) {
+      return { status: "error", message: validatedUrl.error };
+    }
+    safeExternalUrl = validatedUrl.url;
+  }
+
   const supabase = await createClient();
 
   const { error: businessError } = await supabase
@@ -87,8 +97,7 @@ export async function updateBusinessSettings(
       notification_email: notificationEmail,
       timezone,
       booking_mode: bookingMode,
-      external_booking_url:
-        bookingMode === "meridian" ? null : externalBookingUrl,
+      external_booking_url: safeExternalUrl,
     })
     .eq("business_id", businessId);
 
