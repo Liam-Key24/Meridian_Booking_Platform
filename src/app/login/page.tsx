@@ -1,4 +1,5 @@
-import { Badge, Button, Card, Input } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
+import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
@@ -9,30 +10,13 @@ export default function LoginPage() {
           Sign in
         </h1>
         <p className="text-sm text-meridian-text-muted">
-          Placeholder login. Supabase Auth arrives in the client dashboard phase.
+          Sign in with your Meridian business account. Access is limited to
+          businesses you belong to.
         </p>
       </header>
 
       <Card>
-        <form className="space-y-4">
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            placeholder="you@business.com"
-            disabled
-          />
-          <Input
-            label="Password"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            disabled
-          />
-          <Button type="submit" fullWidth disabled>
-            Continue
-          </Button>
-        </form>
+        <LoginForm />
       </Card>
     </main>
   );

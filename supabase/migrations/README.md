@@ -1,12 +1,15 @@
 # Database migrations
 
-Version-controlled Postgres migrations for Meridian Platform Development.
+| File | Purpose |
+|------|---------|
+| `20260823000001_multitenant_foundation.sql` | businesses, profiles, business_memberships |
+| `20260823000002_multitenant_rls.sql` | RLS helpers and policies |
 
-Stage 0 has no schema migrations yet. Stage 1 adds multi-tenant tables and RLS.
+Apply to **Meridian Platform Development** only:
 
 ```bash
-npx supabase link --project-ref <MERIDIAN_PLATFORM_DEVELOPMENT_PROJECT_REF>
+npx supabase link --project-ref <PLATFORM_DEV_REF>
 npx supabase db push
 ```
 
-Never point this CLI at the Meridian Marketing Supabase project.
+Never point this CLI at Meridian Marketing.
