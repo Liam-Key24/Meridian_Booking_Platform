@@ -100,3 +100,24 @@ export async function getBookingForBusiness(
     error: null,
   };
 }
+
+export async function listBookingEvents(
+  businessId: string,
+  bookingId: string,
+): Promise<{ data: Tables<"booking_events">[]; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("booking_events")
+    .select("*")
+    .eq("business_id", businessId)
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[dashboard] listBookingEvents", error);
+    return { data: [], error: "Could not load booking history." };
+  }
+
+  return { data: data ?? [], error: null };
+}

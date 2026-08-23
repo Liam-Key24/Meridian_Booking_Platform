@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 const nav = [
   { href: "/dashboard", label: "Pending" },
   { href: "/dashboard/bookings", label: "All bookings" },
+  { href: "/dashboard/bookings/new", label: "New booking" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
