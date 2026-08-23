@@ -3,7 +3,12 @@
 import { headers } from "next/headers";
 import { sendBookingRequestEmails } from "@/lib/booking/emails";
 import { getPublicBookingPage } from "@/lib/booking/public-page";
+import {
+  buildEmailRateLimitKey,
+  buildIpRateLimitKey,
+} from "@/lib/booking/rate-limit-keys";
 import { assertWithinRateLimit } from "@/lib/booking/rate-limit";
+import { verifyTurnstileToken } from "@/lib/booking/turnstile";
 import {
   validateBookingRequest,
   type BookingRequestInput,
@@ -15,10 +20,16 @@ export type SubmitBookingState = {
   message: string | null;
 };
 
+const SUCCESS_MESSAGE =
+  "Request received. This is not a confirmed booking — the business will review your request and get back to you.";
+
 export async function submitBookingRequest(
   _prev: SubmitBookingState,
   formData: FormData,
 ): Promise<SubmitBookingState> {
+  const idempotencyKey = String(formData.get("idempotencyKey") ?? "").trim();
+  const turnstileToken = String(formData.get("cf-turnstile-response") ?? "");
+
   const input: BookingRequestInput = {
     businessSlug: String(formData.get("businessSlug") ?? ""),
     customerName: String(formData.get("customerName") ?? ""),
@@ -35,16 +46,16 @@ export async function submitBookingRequest(
 
   // Honeypot: pretend success so bots don't retry differently
   if (input.companyWebsite.trim() !== "") {
-    return {
-      status: "success",
-      message:
-        "Request received. This is not a confirmed booking — the business will be in touch.",
-    };
+    return { status: "success", message: SUCCESS_MESSAGE };
   }
 
   const validated = validateBookingRequest(input);
   if (!validated.ok) {
     return { status: "error", message: validated.error };
+  }
+
+  if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
+    return { status: "error", message: "Unable to submit this request." };
   }
 
   const headerStore = await headers();
@@ -53,8 +64,13 @@ export async function submitBookingRequest(
     headerStore.get("x-real-ip") ||
     "unknown";
 
-  const rate = assertWithinRateLimit({
-    key: `book:${validated.data.businessSlug}:${ip}`,
+  const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+  if (!turnstile.ok) {
+    return { status: "error", message: turnstile.error };
+  }
+
+  const rate = await assertWithinRateLimit({
+    key: buildIpRateLimitKey(validated.data.businessSlug, ip),
     limit: 5,
     windowMs: 15 * 60 * 1000,
   });
@@ -65,8 +81,11 @@ export async function submitBookingRequest(
     };
   }
 
-  const emailRate = assertWithinRateLimit({
-    key: `book-email:${validated.data.businessSlug}:${validated.data.customerEmail}`,
+  const emailRate = await assertWithinRateLimit({
+    key: buildEmailRateLimitKey(
+      validated.data.businessSlug,
+      validated.data.customerEmail,
+    ),
     limit: 3,
     windowMs: 60 * 60 * 1000,
   });
@@ -92,12 +111,26 @@ export async function submitBookingRequest(
     };
   }
 
-  const service = page.services.find((item) => item.id === validated.data.serviceId);
+  const service = page.services.find(
+    (item) => item.id === validated.data.serviceId,
+  );
   if (!service) {
     return { status: "error", message: "Please select a valid service." };
   }
 
   const supabase = createServiceRoleClient();
+
+  // Idempotent replay: same key for this business returns existing success
+  const { data: existing } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("business_id", page.business.id)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle();
+
+  if (existing) {
+    return { status: "success", message: SUCCESS_MESSAGE };
+  }
 
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
@@ -113,12 +146,24 @@ export async function submitBookingRequest(
       notes: validated.data.notes,
       status: "pending",
       privacy_consent_at: new Date().toISOString(),
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();
 
-  if (bookingError || !booking) {
+  if (bookingError) {
+    // Unique race on idempotency key — treat as success
+    if (bookingError.code === "23505") {
+      return { status: "success", message: SUCCESS_MESSAGE };
+    }
     console.error("[booking] insert failed", bookingError);
+    return {
+      status: "error",
+      message: "We couldn't save your request. Please try again.",
+    };
+  }
+
+  if (!booking) {
     return {
       status: "error",
       message: "We couldn't save your request. Please try again.",
@@ -134,6 +179,7 @@ export async function submitBookingRequest(
       service_id: service.id,
       preferred_date: validated.data.preferredDate,
       preferred_time: validated.data.preferredTime,
+      idempotency_key: idempotencyKey,
     },
   });
 
@@ -160,9 +206,5 @@ export async function submitBookingRequest(
     console.error("[booking] email failed", error);
   }
 
-  return {
-    status: "success",
-    message:
-      "Request received. This is not a confirmed booking — the business will review your request and get back to you.",
-  };
+  return { status: "success", message: SUCCESS_MESSAGE };
 }

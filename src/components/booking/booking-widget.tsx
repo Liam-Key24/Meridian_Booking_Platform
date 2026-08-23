@@ -15,6 +15,7 @@ export type BookingWidgetProps = {
   bookingMode: BookingMode;
   externalBookingUrl: string | null;
   services: BookingWidgetService[];
+  turnstileSiteKey?: string | null;
   /** Optional className for embed layouts on Meridian client sites. */
   className?: string;
 };
@@ -29,6 +30,7 @@ export function BookingWidget({
   bookingMode,
   externalBookingUrl,
   services,
+  turnstileSiteKey,
   className,
 }: BookingWidgetProps) {
   if (bookingMode === "external") {
@@ -91,6 +93,7 @@ export function BookingWidget({
               businessSlug={businessSlug}
               businessName={businessName}
               services={services}
+              turnstileSiteKey={turnstileSiteKey}
             />
           )}
         </Card>

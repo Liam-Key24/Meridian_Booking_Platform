@@ -219,6 +219,7 @@ export type Database = {
           suggested_time: string | null;
           privacy_consent_at: string | null;
           confirmed_at: string | null;
+          idempotency_key: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -238,6 +239,7 @@ export type Database = {
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
           confirmed_at?: string | null;
+          idempotency_key?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -257,6 +259,7 @@ export type Database = {
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
           confirmed_at?: string | null;
+          idempotency_key?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -377,9 +380,13 @@ export type Database = {
           booking_id: string | null;
           email_type: string;
           recipient_email: string;
-          status: "sent" | "failed" | "skipped";
+          status: "pending" | "sent" | "failed" | "skipped";
           provider_message_id: string | null;
           error_message: string | null;
+          operation_key: string;
+          attempt_count: number;
+          last_attempt_at: string;
+          last_error: string | null;
           metadata: Json;
           created_at: string;
         };
@@ -389,9 +396,13 @@ export type Database = {
           booking_id?: string | null;
           email_type: string;
           recipient_email: string;
-          status: "sent" | "failed" | "skipped";
+          status: "pending" | "sent" | "failed" | "skipped";
           provider_message_id?: string | null;
           error_message?: string | null;
+          operation_key: string;
+          attempt_count?: number;
+          last_attempt_at?: string;
+          last_error?: string | null;
           metadata?: Json;
           created_at?: string;
         };
@@ -401,9 +412,13 @@ export type Database = {
           booking_id?: string | null;
           email_type?: string;
           recipient_email?: string;
-          status?: "sent" | "failed" | "skipped";
+          status?: "pending" | "sent" | "failed" | "skipped";
           provider_message_id?: string | null;
           error_message?: string | null;
+          operation_key?: string;
+          attempt_count?: number;
+          last_attempt_at?: string;
+          last_error?: string | null;
           metadata?: Json;
           created_at?: string;
         };
