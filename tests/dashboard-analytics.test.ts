@@ -4,6 +4,9 @@ import {
   bucketByDay,
   countByStatus,
   emptyStatusCounts,
+  fillPeriodBuckets,
+  niceTableTicks,
+  resolveRequestsPeriodRange,
   resolveWeekRange,
 } from "@/lib/dashboard/analytics-math";
 
@@ -57,5 +60,24 @@ describe("dashboard analytics math", () => {
     expect(week.days).toBe(7);
     expect(week.prevWeekStart).toBe("2026-08-10");
     expect(week.nextWeekStart).toBe("2026-08-24");
+  });
+
+  it("builds daily table buckets for a week", () => {
+    const range = resolveRequestsPeriodRange("daily", "2026-08-19");
+    expect(range.buckets).toHaveLength(7);
+    expect(range.buckets[0]?.label).toBe("Mon");
+    const filled = fillPeriodBuckets(
+      [{ date: "2026-08-17" }, { date: "2026-08-17" }, { date: "2026-08-19" }],
+      "daily",
+      range.buckets,
+    );
+    expect(filled[0]?.count).toBe(2);
+    expect(filled[2]?.count).toBe(1);
+  });
+
+  it("creates nice integer table ticks", () => {
+    expect(niceTableTicks(1)).toEqual([0, 1]);
+    expect(niceTableTicks(7).at(-1)).toBeGreaterThanOrEqual(7);
+    expect(niceTableTicks(0)[0]).toBe(0);
   });
 });

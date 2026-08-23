@@ -7,8 +7,13 @@ import {
   aggregateServiceCounts,
   bucketByDay,
   countByStatus,
+  fillPeriodBuckets,
+  parseRequestsPeriod,
+  resolveRequestsPeriodRange,
   resolveWeekRange,
   type DayCount,
+  type PeriodCount,
+  type RequestsPeriod,
   type ServiceCount,
   type StatusCounts,
 } from "@/lib/dashboard/analytics-math";
@@ -28,6 +33,9 @@ export type DashboardMetrics = {
   activeServices: number;
   statusDistribution: StatusCounts;
   requestsByDay: DayCount[];
+  requestsByPeriod: PeriodCount[];
+  requestsPeriod: RequestsPeriod;
+  requestsPeriodLabel: string;
   confirmedByDay: DayCount[];
   topServices: ServiceCount[];
   warnings: string[];
@@ -56,11 +64,16 @@ export type DashboardMetrics = {
 
 export async function getDashboardMetrics(
   businessId: string,
-  options?: { weekStart?: string },
+  options?: { weekStart?: string; requestsPeriod?: RequestsPeriod | string },
 ): Promise<{ data: DashboardMetrics | null; error: string | null }> {
   const supabase = await createClient();
   const week = resolveWeekRange(options?.weekStart);
   const range = { from: week.from, to: week.to, days: week.days };
+  const requestsPeriod = parseRequestsPeriod(options?.requestsPeriod);
+  const requestsRange = resolveRequestsPeriodRange(
+    requestsPeriod,
+    options?.weekStart ?? week.from,
+  );
   const today = formatLocalDate(new Date());
   const in7 = formatLocalDate(addDays(new Date(), 6));
 
@@ -116,8 +129,8 @@ export async function getDashboardMetrics(
       .from("bookings")
       .select("created_at")
       .eq("business_id", businessId)
-      .gte("created_at", `${range.from}T00:00:00.000Z`)
-      .lte("created_at", `${range.to}T23:59:59.999Z`),
+      .gte("created_at", `${requestsRange.from}T00:00:00.000Z`)
+      .lte("created_at", `${requestsRange.to}T23:59:59.999Z`),
     supabase
       .from("bookings")
       .select("preferred_date")
@@ -231,6 +244,15 @@ export async function getDashboardMetrics(
         range.from,
         range.to,
       ),
+      requestsByPeriod: fillPeriodBuckets(
+        (createdRows.data ?? []).map((row) => ({
+          date: row.created_at.slice(0, 10),
+        })),
+        requestsPeriod,
+        requestsRange.buckets,
+      ),
+      requestsPeriod,
+      requestsPeriodLabel: requestsRange.rangeLabel,
       confirmedByDay: bucketByDay(
         (confirmedPrefRows.data ?? []).map((row) => ({
           date: row.preferred_date,

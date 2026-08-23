@@ -25,7 +25,7 @@ import {
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
 
 type PageProps = {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; period?: string }>;
 };
 
 export default async function DashboardHomePage({ searchParams }: PageProps) {
@@ -46,7 +46,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
   const week = resolveWeekRange(params.week);
   const { data: metrics, error } = await getDashboardMetrics(
     context.business.id,
-    { weekStart: week.from },
+    { weekStart: week.from, requestsPeriod: params.period },
   );
 
   if (error || !metrics) {
@@ -88,7 +88,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           </h2>
           <div className="flex items-center gap-2 rounded-meridian border border-meridian-border bg-meridian-surface px-2 py-1.5">
             <Link
-              href={`/dashboard?week=${week.prevWeekStart}`}
+              href={`/dashboard?week=${week.prevWeekStart}${params.period ? `&period=${params.period}` : ""}`}
               className="inline-flex size-8 items-center justify-center rounded-meridian-sm text-meridian-accent hover:bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
               aria-label="Previous week"
             >
@@ -98,7 +98,7 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
               {weekLabel}
             </p>
             <Link
-              href={`/dashboard?week=${week.nextWeekStart}`}
+              href={`/dashboard?week=${week.nextWeekStart}${params.period ? `&period=${params.period}` : ""}`}
               className="inline-flex size-8 items-center justify-center rounded-meridian-sm text-meridian-accent hover:bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
               aria-label="Next week"
             >
@@ -141,11 +141,18 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           rangeLabel={rangeLabel}
         />
         <TopServicesChart data={metrics.topServices} rangeLabel={rangeLabel} />
-        <RequestsByDayChart data={metrics.requestsByDay} rangeLabel={rangeLabel} />
+        <RequestsByDayChart
+          data={metrics.requestsByPeriod}
+          rangeLabel={metrics.requestsPeriodLabel}
+          period={metrics.requestsPeriod}
+          week={week.from}
+          yAxisLabel="Tables"
+        />
         <RequestsByDayChart
           data={metrics.confirmedByDay}
           rangeLabel={rangeLabel}
           title="Confirmed bookings by preferred day"
+          yAxisLabel="Tables"
         />
       </section>
 
