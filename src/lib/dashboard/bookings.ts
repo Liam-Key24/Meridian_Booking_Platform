@@ -3,8 +3,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { BookingStatus, Tables } from "@/types/database";
 
+export type BookingService = Pick<
+  Tables<"services">,
+  "id" | "name" | "duration_minutes"
+>;
+
 export type BookingListItem = Tables<"bookings"> & {
-  service: Pick<Tables<"services">, "id" | "name"> | null;
+  service: BookingService | null;
 };
 
 export type BookingFilters = {
@@ -22,7 +27,7 @@ export async function listBookingsForBusiness(
 
   let query = supabase
     .from("bookings")
-    .select("*, service:services(id, name)")
+    .select("*, service:services(id, name, duration_minutes)")
     .eq("business_id", businessId)
     .order("preferred_date", { ascending: true })
     .order("preferred_time", { ascending: true });
@@ -58,10 +63,7 @@ export async function listBookingsForBusiness(
 
   const rows = (data ?? []).map((row) => {
     const { service, ...booking } = row as Tables<"bookings"> & {
-      service:
-        | Pick<Tables<"services">, "id" | "name">
-        | Pick<Tables<"services">, "id" | "name">[]
-        | null;
+      service: BookingService | BookingService[] | null;
     };
     const resolved = Array.isArray(service) ? service[0] : service;
     return {
@@ -81,7 +83,7 @@ export async function getBookingForBusiness(
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, service:services(id, name)")
+    .select("*, service:services(id, name, duration_minutes)")
     .eq("business_id", businessId)
     .eq("id", bookingId)
     .maybeSingle();
@@ -96,10 +98,7 @@ export async function getBookingForBusiness(
   }
 
   const { service, ...booking } = data as Tables<"bookings"> & {
-    service:
-      | Pick<Tables<"services">, "id" | "name">
-      | Pick<Tables<"services">, "id" | "name">[]
-      | null;
+    service: BookingService | BookingService[] | null;
   };
   const resolved = Array.isArray(service) ? service[0] : service;
 

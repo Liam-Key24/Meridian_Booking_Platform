@@ -89,6 +89,34 @@ export function weekdayLabel(iso: string): string {
   });
 }
 
+function dayAndMonth(date: Date): string {
+  const month = date.toLocaleDateString("en-GB", { month: "short" });
+  return `${date.getDate()} ${month}`;
+}
+
+function shortYear(date: Date): string {
+  return String(date.getFullYear()).slice(-2);
+}
+
+/**
+ * Toolbar label: "17 Aug – 23 Aug 26" for a week,
+ * "Sunday, 23 Aug 26" for a single day.
+ */
+export function calendarRangeLabel(
+  view: CalendarView,
+  from: string,
+  to: string,
+): string {
+  const start = parseLocalDate(from);
+  if (view === "day") {
+    const weekday = start.toLocaleDateString("en-GB", { weekday: "long" });
+    return `${weekday}, ${dayAndMonth(start)} ${shortYear(start)}`;
+  }
+
+  const end = parseLocalDate(to);
+  return `${dayAndMonth(start)} – ${dayAndMonth(end)} ${shortYear(end)}`;
+}
+
 export function longDateLabel(iso: string): string {
   return parseLocalDate(iso).toLocaleDateString(undefined, {
     weekday: "long",
