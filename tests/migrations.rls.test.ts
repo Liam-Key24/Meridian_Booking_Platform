@@ -49,3 +49,19 @@ describe("Phase 1 multi-tenant migrations", () => {
     expect(sql).not.toMatch(/\bstripe_[a-z_]+\b/i);
   });
 });
+
+describe("Phase 4 audit logs", () => {
+  const sql = readMigrations();
+
+  it("creates audit_logs with RLS enabled", () => {
+    expect(sql).toMatch(/create table public\.audit_logs\b/i);
+    expect(sql).toMatch(
+      /alter table public\.audit_logs enable row level security/i,
+    );
+  });
+
+  it("scopes audit log access to owners and meridian admins", () => {
+    expect(sql).toMatch(/audit_logs_select_owner_or_admin/);
+    expect(sql).toMatch(/is_business_owner\(business_id\)/);
+  });
+});
