@@ -1,3 +1,3 @@
 # Admin components
 
-Meridian-admin operations UI lands in Phase 6.
+Meridian-admin-only forms and helpers for `/admin` routes.

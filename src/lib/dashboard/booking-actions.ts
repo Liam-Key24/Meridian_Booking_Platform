@@ -188,6 +188,7 @@ export async function approveBooking(
 
   try {
     await sendBookingConfirmedEmail({
+      businessId,
       businessName: context.business.name,
       notificationEmail: loaded.settings.notification_email,
       customerName: loaded.booking.customer_name,
@@ -264,6 +265,7 @@ export async function declineBooking(
 
   try {
     await sendBookingDeclinedEmail({
+      businessId,
       businessName: context.business.name,
       notificationEmail: loaded.settings.notification_email,
       customerName: loaded.booking.customer_name,
@@ -354,6 +356,7 @@ export async function suggestBookingTime(
 
   try {
     await sendBookingSuggestedEmail({
+      businessId,
       businessName: context.business.name,
       notificationEmail: loaded.settings.notification_email,
       customerName: loaded.booking.customer_name,
@@ -425,6 +428,7 @@ export async function cancelBooking(
 
   try {
     await sendBookingCancelledEmail({
+      businessId,
       businessName: context.business.name,
       notificationEmail: loaded.settings.notification_email,
       customerName: loaded.booking.customer_name,
@@ -553,6 +557,7 @@ export async function createManualBooking(
   if (sendConfirmation) {
     try {
       await sendBookingConfirmedEmail({
+        businessId,
         businessName: context.business.name,
         notificationEmail: settings.notification_email,
         customerName,

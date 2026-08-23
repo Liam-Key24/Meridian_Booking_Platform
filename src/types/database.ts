@@ -370,6 +370,60 @@ export type Database = {
           },
         ];
       };
+      email_delivery_logs: {
+        Row: {
+          id: string;
+          business_id: string | null;
+          booking_id: string | null;
+          email_type: string;
+          recipient_email: string;
+          status: "sent" | "failed" | "skipped";
+          provider_message_id: string | null;
+          error_message: string | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id?: string | null;
+          booking_id?: string | null;
+          email_type: string;
+          recipient_email: string;
+          status: "sent" | "failed" | "skipped";
+          provider_message_id?: string | null;
+          error_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string | null;
+          booking_id?: string | null;
+          email_type?: string;
+          recipient_email?: string;
+          status?: "sent" | "failed" | "skipped";
+          provider_message_id?: string | null;
+          error_message?: string | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_logs_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "email_delivery_logs_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {

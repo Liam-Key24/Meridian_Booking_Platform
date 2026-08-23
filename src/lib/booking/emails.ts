@@ -1,8 +1,11 @@
 import "server-only";
 
 import { Resend } from "resend";
+import { logEmailDelivery } from "@/lib/booking/email-log";
 
 type BookingEmailPayload = {
+  businessId: string;
+  bookingId: string;
   businessName: string;
   notificationEmail: string;
   customerName: string;
@@ -33,6 +36,22 @@ export async function sendBookingRequestEmails(
     console.info(
       "[email] RESEND_API_KEY not set — skipping booking notification emails",
     );
+    await logEmailDelivery({
+      businessId: payload.businessId,
+      bookingId: payload.bookingId,
+      emailType: "booking.request.customer",
+      recipientEmail: payload.customerEmail,
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
+    await logEmailDelivery({
+      businessId: payload.businessId,
+      bookingId: payload.bookingId,
+      emailType: "booking.request.business",
+      recipientEmail: payload.notificationEmail,
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
     return { customerSent: false, businessSent: false };
   }
 
@@ -61,6 +80,19 @@ export async function sendBookingRequestEmails(
       .join("\n"),
   });
 
+  await logEmailDelivery({
+    businessId: payload.businessId,
+    bookingId: payload.bookingId,
+    emailType: "booking.request.customer",
+    recipientEmail: payload.customerEmail,
+    status: customerResult.error ? "failed" : "sent",
+    providerMessageId:
+      !customerResult.error && customerResult.data
+        ? customerResult.data.id
+        : null,
+    errorMessage: customerResult.error?.message ?? null,
+  });
+
   const businessResult = await resend.emails.send({
     from: fromAddress(),
     to: payload.notificationEmail,
@@ -80,6 +112,19 @@ export async function sendBookingRequestEmails(
     ]
       .filter(Boolean)
       .join("\n"),
+  });
+
+  await logEmailDelivery({
+    businessId: payload.businessId,
+    bookingId: payload.bookingId,
+    emailType: "booking.request.business",
+    recipientEmail: payload.notificationEmail,
+    status: businessResult.error ? "failed" : "sent",
+    providerMessageId:
+      !businessResult.error && businessResult.data
+        ? businessResult.data.id
+        : null,
+    errorMessage: businessResult.error?.message ?? null,
   });
 
   return {

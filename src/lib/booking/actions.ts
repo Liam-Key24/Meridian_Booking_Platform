@@ -143,6 +143,8 @@ export async function submitBookingRequest(
 
   try {
     await sendBookingRequestEmails({
+      businessId: page.business.id,
+      bookingId: booking.id,
       businessName: page.business.name,
       notificationEmail: page.settings.notification_email,
       customerName: validated.data.customerName,

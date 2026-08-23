@@ -65,3 +65,20 @@ describe("Phase 4 audit logs", () => {
     expect(sql).toMatch(/is_business_owner\(business_id\)/);
   });
 });
+
+describe("Phase 6 admin ops", () => {
+  const sql = readMigrations();
+
+  it("grants meridian_admin booking support policies", () => {
+    expect(sql).toMatch(/bookings_select_meridian_admin/);
+    expect(sql).toMatch(/booking_settings_select_meridian_admin/);
+    expect(sql).toMatch(/services_select_meridian_admin/);
+  });
+
+  it("creates email_delivery_logs with RLS", () => {
+    expect(sql).toMatch(/create table public\.email_delivery_logs\b/i);
+    expect(sql).toMatch(
+      /alter table public\.email_delivery_logs enable row level security/i,
+    );
+  });
+});

@@ -2,8 +2,10 @@ import "server-only";
 
 import { Resend } from "resend";
 import { buildBookingIcs } from "@/lib/booking/ics";
+import { logEmailDelivery } from "@/lib/booking/email-log";
 
 type BasePayload = {
+  businessId: string;
   businessName: string;
   notificationEmail: string;
   customerName: string;
@@ -30,12 +32,36 @@ function whenLabel(date: string, time: string): string {
   return `${date} at ${time.slice(0, 5)}`;
 }
 
+async function recordDecisionEmail(params: {
+  payload: BasePayload;
+  emailType: string;
+  status: "sent" | "failed" | "skipped";
+  providerMessageId?: string | null;
+  errorMessage?: string | null;
+}) {
+  await logEmailDelivery({
+    businessId: params.payload.businessId,
+    bookingId: params.payload.bookingId,
+    emailType: params.emailType,
+    recipientEmail: params.payload.customerEmail,
+    status: params.status,
+    providerMessageId: params.providerMessageId,
+    errorMessage: params.errorMessage,
+  });
+}
+
 export async function sendBookingConfirmedEmail(
   payload: BasePayload,
 ): Promise<boolean> {
   const resend = getResendClient();
   if (!resend) {
     console.info("[email] RESEND_API_KEY not set — skipping confirmation email");
+    await recordDecisionEmail({
+      payload,
+      emailType: "booking.confirmed",
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
     return false;
   }
 
@@ -79,6 +105,14 @@ export async function sendBookingConfirmedEmail(
     ],
   });
 
+  await recordDecisionEmail({
+    payload,
+    emailType: "booking.confirmed",
+    status: result.error ? "failed" : "sent",
+    providerMessageId: !result.error && result.data ? result.data.id : null,
+    errorMessage: result.error?.message ?? null,
+  });
+
   return !result.error;
 }
 
@@ -86,7 +120,15 @@ export async function sendBookingDeclinedEmail(
   payload: BasePayload & { reason?: string | null },
 ): Promise<boolean> {
   const resend = getResendClient();
-  if (!resend) return false;
+  if (!resend) {
+    await recordDecisionEmail({
+      payload,
+      emailType: "booking.declined",
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
+    return false;
+  }
 
   const result = await resend.emails.send({
     from: fromAddress(),
@@ -111,6 +153,14 @@ export async function sendBookingDeclinedEmail(
       .join("\n"),
   });
 
+  await recordDecisionEmail({
+    payload,
+    emailType: "booking.declined",
+    status: result.error ? "failed" : "sent",
+    providerMessageId: !result.error && result.data ? result.data.id : null,
+    errorMessage: result.error?.message ?? null,
+  });
+
   return !result.error;
 }
 
@@ -121,7 +171,15 @@ export async function sendBookingSuggestedEmail(
   },
 ): Promise<boolean> {
   const resend = getResendClient();
-  if (!resend) return false;
+  if (!resend) {
+    await recordDecisionEmail({
+      payload,
+      emailType: "booking.suggested",
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
+    return false;
+  }
 
   const result = await resend.emails.send({
     from: fromAddress(),
@@ -143,6 +201,14 @@ export async function sendBookingSuggestedEmail(
     ].join("\n"),
   });
 
+  await recordDecisionEmail({
+    payload,
+    emailType: "booking.suggested",
+    status: result.error ? "failed" : "sent",
+    providerMessageId: !result.error && result.data ? result.data.id : null,
+    errorMessage: result.error?.message ?? null,
+  });
+
   return !result.error;
 }
 
@@ -150,7 +216,15 @@ export async function sendBookingCancelledEmail(
   payload: BasePayload,
 ): Promise<boolean> {
   const resend = getResendClient();
-  if (!resend) return false;
+  if (!resend) {
+    await recordDecisionEmail({
+      payload,
+      emailType: "booking.cancelled",
+      status: "skipped",
+      errorMessage: "RESEND_API_KEY not set",
+    });
+    return false;
+  }
 
   const result = await resend.emails.send({
     from: fromAddress(),
@@ -169,6 +243,14 @@ export async function sendBookingCancelledEmail(
       "Kind regards,",
       payload.businessName,
     ].join("\n"),
+  });
+
+  await recordDecisionEmail({
+    payload,
+    emailType: "booking.cancelled",
+    status: result.error ? "failed" : "sent",
+    providerMessageId: !result.error && result.data ? result.data.id : null,
+    errorMessage: result.error?.message ?? null,
   });
 
   return !result.error;
