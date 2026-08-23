@@ -37,8 +37,8 @@ export default async function DashboardPendingPage() {
             Pending bookings
           </h1>
           <p className="text-meridian-text-muted">
-            Review new requests for {context.business.name}. Approve and decline
-            actions arrive in the next phase.
+            Review new requests for {context.business.name}. Open a booking to
+            approve, decline, or suggest another time.
           </p>
         </div>
         <Link

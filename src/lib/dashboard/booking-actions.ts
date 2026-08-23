@@ -117,6 +117,7 @@ async function writeHistory(params: {
 function revalidateBookingPaths(bookingId: string) {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/bookings");
+  revalidatePath("/dashboard/calendar");
   revalidatePath(`/dashboard/bookings/${bookingId}`);
 }
 

@@ -16,6 +16,8 @@ type ServiceOption = {
 type ManualBookingFormProps = {
   businessId: string;
   services: ServiceOption[];
+  defaultDate?: string;
+  defaultTime?: string;
 };
 
 const initialState: BookingActionState = {
@@ -26,6 +28,8 @@ const initialState: BookingActionState = {
 export function ManualBookingForm({
   businessId,
   services,
+  defaultDate,
+  defaultTime,
 }: ManualBookingFormProps) {
   const [state, formAction, pending] = useActionState(
     createManualBooking,
@@ -61,8 +65,20 @@ export function ManualBookingForm({
       />
       <Input label="Customer phone" name="customerPhone" type="tel" />
       <div className="grid gap-3 sm:grid-cols-2">
-        <Input label="Date" name="preferredDate" type="date" required />
-        <Input label="Time" name="preferredTime" type="time" required />
+        <Input
+          label="Date"
+          name="preferredDate"
+          type="date"
+          required
+          defaultValue={defaultDate}
+        />
+        <Input
+          label="Time"
+          name="preferredTime"
+          type="time"
+          required
+          defaultValue={defaultTime}
+        />
       </div>
       <Input label="Guests" name="guestCount" type="number" min={1} />
       <Textarea label="Notes" name="notes" rows={3} />
