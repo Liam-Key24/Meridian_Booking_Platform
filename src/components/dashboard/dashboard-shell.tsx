@@ -50,6 +50,7 @@ export function DashboardShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  const searchId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -92,7 +93,7 @@ export function DashboardShell({
           {publicBookHref ? (
             <Link
               href={publicBookHref}
-              className="mt-2 inline-block text-xs font-semibold text-meridian-teal hover:underline"
+              className="mt-2 inline-block text-xs font-semibold text-meridian-accent hover:underline"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -161,11 +162,11 @@ export function DashboardShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 border-b border-meridian-border bg-meridian-surface/95 backdrop-blur">
-          <div className="flex items-center justify-between gap-4 px-[var(--meridian-space-page)] py-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3 px-[var(--meridian-space-page)] py-3 lg:gap-4 lg:py-4">
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-meridian-sm border border-meridian-border text-meridian-text lg:hidden"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-meridian-sm border border-meridian-border text-meridian-text lg:hidden"
                 aria-expanded={open}
                 aria-controls={titleId}
                 onClick={() => setOpen((value) => !value)}
@@ -175,30 +176,64 @@ export function DashboardShell({
                   ≡
                 </span>
               </button>
-              <div>
-                <p className="text-xs font-semibold tracking-wide text-meridian-blue uppercase">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-semibold tracking-wide text-meridian-accent uppercase">
                   {businessName}
                 </p>
                 <h1
                   id={titleId}
-                  className="text-lg font-semibold tracking-tight text-meridian-text sm:text-xl"
+                  className="truncate text-lg font-semibold tracking-tight text-meridian-text sm:text-xl"
                 >
                   {pageTitle}
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard/bookings"
-                className="hidden rounded-meridian-sm border border-meridian-border px-3 py-2 text-sm font-medium text-meridian-text-muted hover:bg-meridian-surface-muted sm:inline-flex"
-              >
+
+            <form
+              method="get"
+              action="/dashboard/bookings"
+              className="order-last w-full min-w-0 flex-1 basis-full md:order-none md:basis-0"
+              role="search"
+            >
+              <label htmlFor={searchId} className="sr-only">
                 Search bookings
+              </label>
+              <div className="relative mx-auto w-full max-w-xl">
+                <span
+                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-meridian-accent"
+                  aria-hidden
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z" />
+                  </svg>
+                </span>
+                <input
+                  id={searchId}
+                  name="q"
+                  type="search"
+                  placeholder="Search bookings…"
+                  className="h-11 w-full rounded-meridian border border-meridian-border bg-meridian-surface-muted py-2 pr-3 pl-10 text-sm text-meridian-text placeholder:text-meridian-text-muted transition-[border-color,box-shadow] focus-visible:border-meridian-accent focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--meridian-accent)_35%,transparent)] focus-visible:outline-none"
+                />
+              </div>
+            </form>
+
+            <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {publicBookHref ? (
+                <Link
+                  href={publicBookHref}
+                  className="inline-flex h-11 items-center rounded-meridian border border-meridian-border bg-meridian-surface px-3 text-sm font-semibold text-meridian-text hover:border-meridian-accent sm:px-4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Public page
+                </Link>
+              ) : null}
+              <Link
+                href="/dashboard/bookings/new"
+                className="inline-flex h-11 items-center rounded-meridian bg-meridian-accent px-3 text-sm font-semibold text-meridian-text hover:brightness-105 sm:px-4"
+              >
+                Add booking
               </Link>
-              <form action={signOut} className="hidden sm:block">
-                <Button type="submit" variant="ghost" size="sm">
-                  Sign out
-                </Button>
-              </form>
             </div>
           </div>
         </header>

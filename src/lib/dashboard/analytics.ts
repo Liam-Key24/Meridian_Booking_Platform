@@ -7,7 +7,7 @@ import {
   aggregateServiceCounts,
   bucketByDay,
   countByStatus,
-  resolveDashboardRange,
+  resolveWeekRange,
   type DayCount,
   type ServiceCount,
   type StatusCounts,
@@ -24,7 +24,7 @@ export type DashboardMetrics = {
   pendingCount: number;
   confirmedToday: number;
   upcomingConfirmed7d: number;
-  declinedOrCancelledInRange: number;
+  cancelledInRange: number;
   activeServices: number;
   statusDistribution: StatusCounts;
   requestsByDay: DayCount[];
@@ -56,10 +56,11 @@ export type DashboardMetrics = {
 
 export async function getDashboardMetrics(
   businessId: string,
-  options?: { days?: number },
+  options?: { weekStart?: string },
 ): Promise<{ data: DashboardMetrics | null; error: string | null }> {
   const supabase = await createClient();
-  const range = resolveDashboardRange(options?.days ?? 30);
+  const week = resolveWeekRange(options?.weekStart);
+  const range = { from: week.from, to: week.to, days: week.days };
   const today = formatLocalDate(new Date());
   const in7 = formatLocalDate(addDays(new Date(), 6));
 
@@ -170,8 +171,8 @@ export async function getDashboardMetrics(
     return { data: null, error: "Could not load dashboard metrics." };
   }
 
-  const declinedOrCancelledInRange = (bookingsInRange.data ?? []).filter(
-    (row) => row.status === "declined" || row.status === "cancelled",
+  const cancelledInRange = (bookingsInRange.data ?? []).filter(
+    (row) => row.status === "cancelled",
   ).length;
 
   const warnings: string[] = [];
@@ -220,7 +221,7 @@ export async function getDashboardMetrics(
       pendingCount: pendingRows.count ?? 0,
       confirmedToday: confirmedTodayRows.count ?? 0,
       upcomingConfirmed7d: upcomingRows.data?.length ?? 0,
-      declinedOrCancelledInRange,
+      cancelledInRange,
       activeServices: servicesActive.count ?? 0,
       statusDistribution: countByStatus(allStatusRows.data ?? []),
       requestsByDay: bucketByDay(

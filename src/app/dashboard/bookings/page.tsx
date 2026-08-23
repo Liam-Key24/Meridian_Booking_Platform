@@ -18,6 +18,7 @@ type PageProps = {
     status?: string;
     from?: string;
     to?: string;
+    q?: string;
   }>;
 };
 
@@ -54,10 +55,11 @@ export default async function DashboardBookingsPage({ searchParams }: PageProps)
   const status = parseStatus(params.status);
   const from = params.from ?? "";
   const to = params.to ?? "";
+  const q = params.q?.trim() ?? "";
 
   const { data: bookings, error } = await listBookingsForBusiness(
     context.business.id,
-    { status, from: from || undefined, to: to || undefined },
+    { status, from: from || undefined, to: to || undefined, q: q || undefined },
   );
 
   return (

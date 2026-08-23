@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Badge,
   Card,
   EmptyState,
   ErrorState,
@@ -11,11 +10,26 @@ import {
   StatusDistributionChart,
   TopServicesChart,
 } from "@/components/dashboard/charts";
-import { MetricCard } from "@/components/dashboard/metric-card";
+import {
+  MetricCard,
+  MetricIconCancelled,
+  MetricIconConfirmed,
+  MetricIconPending,
+  MetricIconUpcoming,
+} from "@/components/dashboard/metric-card";
 import { getDashboardMetrics } from "@/lib/dashboard/analytics";
+import {
+  formatWeekLabel,
+  resolveWeekRange,
+} from "@/lib/dashboard/analytics-math";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
 
-export default async function DashboardHomePage() {
+type PageProps = {
+  searchParams: Promise<{ week?: string }>;
+};
+
+export default async function DashboardHomePage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const context = await requireDashboardContext();
 
   if (!context) {
@@ -29,9 +43,10 @@ export default async function DashboardHomePage() {
     );
   }
 
+  const week = resolveWeekRange(params.week);
   const { data: metrics, error } = await getDashboardMetrics(
     context.business.id,
-    { days: 30 },
+    { weekStart: week.from },
   );
 
   if (error || !metrics) {
@@ -45,39 +60,11 @@ export default async function DashboardHomePage() {
     );
   }
 
-  const rangeLabel = `${metrics.range.from} → ${metrics.range.to} (${metrics.range.days} days)`;
+  const weekLabel = formatWeekLabel(week.from, week.to);
+  const rangeLabel = weekLabel;
 
   return (
     <main className="flex flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8 lg:py-10">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-2">
-          <Badge tone="teal">Overview</Badge>
-          <h2 className="text-3xl font-semibold tracking-tight text-meridian-text">
-            {context.business.name}
-          </h2>
-          <p className="max-w-2xl text-meridian-text-muted">
-            Live booking metrics from Supabase under Row Level Security — never
-            fabricated.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`/book/${context.business.slug}`}
-            className="inline-flex h-11 items-center rounded-meridian border border-meridian-border bg-meridian-surface px-4 text-sm font-semibold text-meridian-text"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Public page
-          </Link>
-          <Link
-            href="/dashboard/bookings/new"
-            className="inline-flex h-11 items-center rounded-meridian bg-meridian-teal px-4 text-sm font-semibold text-meridian-text-inverse"
-          >
-            New booking
-          </Link>
-        </div>
-      </header>
-
       {metrics.warnings.length > 0 ? (
         <Card title="Configuration warnings">
           <ul className="list-disc space-y-1 pl-5 text-sm text-meridian-status-pending">
@@ -87,66 +74,65 @@ export default async function DashboardHomePage() {
           </ul>
           <Link
             href="/dashboard/settings"
-            className="mt-3 inline-block text-sm font-semibold text-meridian-teal hover:underline"
+            className="mt-3 inline-block text-sm font-semibold text-meridian-accent hover:underline"
           >
             Open settings
           </Link>
         </Card>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <MetricCard
-          label="Pending requests"
-          value={metrics.pendingCount}
-          rangeLabel="Open now"
-          href="/dashboard/bookings?status=pending"
-          tone="accent"
-        />
-        <MetricCard
-          label="Confirmed today"
-          value={metrics.confirmedToday}
-          rangeLabel="Preferred date = today"
-          href="/dashboard/calendar?view=day"
-        />
-        <MetricCard
-          label="Upcoming (7 days)"
-          value={metrics.upcomingConfirmed7d}
-          rangeLabel="Confirmed next 7 days"
-          href="/dashboard/calendar?view=week"
-          tone="blue"
-        />
-        <MetricCard
-          label="Declined / cancelled"
-          value={metrics.declinedOrCancelledInRange}
-          rangeLabel={rangeLabel}
-          href="/dashboard/bookings?status=declined"
-          tone="muted"
-        />
-        <MetricCard
-          label="Active services"
-          value={metrics.activeServices}
-          rangeLabel="Published for requests"
-          href="/dashboard/settings"
-        />
-        <Card>
-          <div className="space-y-2">
-            <p className="text-xs font-semibold tracking-wide text-meridian-text-muted uppercase">
-              Booking mode
-            </p>
-            <p className="text-xl font-semibold capitalize text-meridian-text">
-              {metrics.bookingMode ?? "—"}
-            </p>
-            <p className="text-xs text-meridian-text-muted">
-              {metrics.timezone ?? "Timezone not set"}
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xl font-semibold tracking-tight text-meridian-text sm:text-2xl">
+            Live metrics
+          </h2>
+          <div className="flex items-center gap-2 rounded-meridian border border-meridian-border bg-meridian-surface px-2 py-1.5">
+            <Link
+              href={`/dashboard?week=${week.prevWeekStart}`}
+              className="inline-flex size-8 items-center justify-center rounded-meridian-sm text-meridian-accent hover:bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
+              aria-label="Previous week"
+            >
+              ‹
+            </Link>
+            <p className="min-w-[11rem] text-center text-sm font-semibold text-meridian-text tabular-nums">
+              {weekLabel}
             </p>
             <Link
-              href="/dashboard/settings"
-              className="inline-block text-sm font-semibold text-meridian-teal hover:underline"
+              href={`/dashboard?week=${week.nextWeekStart}`}
+              className="inline-flex size-8 items-center justify-center rounded-meridian-sm text-meridian-accent hover:bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
+              aria-label="Next week"
             >
-              Manage mode
+              ›
             </Link>
           </div>
-        </Card>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Pending requests"
+            value={metrics.pendingCount}
+            href="/dashboard/bookings?status=pending"
+            icon={<MetricIconPending />}
+          />
+          <MetricCard
+            label="Confirmed today"
+            value={metrics.confirmedToday}
+            href="/dashboard/calendar?view=day"
+            icon={<MetricIconConfirmed />}
+          />
+          <MetricCard
+            label="Upcoming"
+            value={metrics.upcomingConfirmed7d}
+            href="/dashboard/calendar?view=week"
+            icon={<MetricIconUpcoming />}
+          />
+          <MetricCard
+            label="Cancelled"
+            value={metrics.cancelledInRange}
+            href="/dashboard/bookings?status=cancelled"
+            icon={<MetricIconCancelled />}
+          />
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -180,7 +166,7 @@ export default async function DashboardHomePage() {
                   <div>
                     <Link
                       href={`/dashboard/bookings/${booking.id}`}
-                      className="font-medium text-meridian-text hover:text-meridian-teal"
+                      className="font-medium text-meridian-text hover:text-meridian-accent"
                     >
                       {booking.customer_name}
                     </Link>
@@ -213,7 +199,7 @@ export default async function DashboardHomePage() {
                   <div>
                     <Link
                       href={`/dashboard/bookings/${booking.id}`}
-                      className="font-medium text-meridian-text hover:text-meridian-teal"
+                      className="font-medium text-meridian-text hover:text-meridian-accent"
                     >
                       {booking.customer_name}
                     </Link>

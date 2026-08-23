@@ -4,6 +4,7 @@ import {
   bucketByDay,
   countByStatus,
   emptyStatusCounts,
+  resolveWeekRange,
 } from "@/lib/dashboard/analytics-math";
 
 describe("dashboard analytics math", () => {
@@ -47,5 +48,14 @@ describe("dashboard analytics math", () => {
     ]);
     expect(top[0]?.name).toBe("Cut");
     expect(top[0]?.count).toBe(2);
+  });
+
+  it("resolves a Monday–Sunday week from an anchor date", () => {
+    const week = resolveWeekRange("2026-08-19");
+    expect(week.from).toBe("2026-08-17");
+    expect(week.to).toBe("2026-08-23");
+    expect(week.days).toBe(7);
+    expect(week.prevWeekStart).toBe("2026-08-10");
+    expect(week.nextWeekStart).toBe("2026-08-24");
   });
 });
