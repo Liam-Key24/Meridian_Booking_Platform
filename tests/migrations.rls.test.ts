@@ -1,0 +1,51 @@
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+const migrationsDir = join(process.cwd(), "supabase/migrations");
+
+function readMigrations(): string {
+  return readdirSync(migrationsDir)
+    .filter((name) => name.endsWith(".sql"))
+    .sort()
+    .map((name) => readFileSync(join(migrationsDir, name), "utf8"))
+    .join("\n\n");
+}
+
+describe("Phase 1 multi-tenant migrations", () => {
+  const sql = readMigrations();
+
+  it("defines businesses, profiles, and business_memberships", () => {
+    expect(sql).toMatch(/create table public\.businesses\b/i);
+    expect(sql).toMatch(/create table public\.profiles\b/i);
+    expect(sql).toMatch(/create table public\.business_memberships\b/i);
+  });
+
+  it("uses owner and staff membership roles", () => {
+    expect(sql).toMatch(/'owner'/);
+    expect(sql).toMatch(/'staff'/);
+    expect(sql).toMatch(/meridian_admin/);
+  });
+
+  it("enables RLS on Phase 1 tables", () => {
+    for (const table of ["businesses", "profiles", "business_memberships"]) {
+      expect(sql).toMatch(
+        new RegExp(`alter table public\\.${table} enable row level security`, "i"),
+      );
+    }
+  });
+
+  it("requires membership checks on businesses select", () => {
+    expect(sql).toMatch(/has_active_business_membership/i);
+    expect(sql).not.toMatch(
+      /create policy "businesses_select_all_authenticated"/i,
+    );
+  });
+
+  it("keeps Stripe / payment tables out of Phase 1", () => {
+    expect(sql).not.toMatch(/create table public\.payment_accounts\b/i);
+    expect(sql).not.toMatch(/create table public\.payments\b/i);
+    expect(sql).not.toMatch(/create table public\.refunds\b/i);
+    expect(sql).not.toMatch(/\bstripe_[a-z_]+\b/i);
+  });
+});
