@@ -9,6 +9,7 @@ export type BookingStatus =
   | "cancelled"
   | "suggested";
 export type BookingMode = "meridian" | "external" | "hybrid";
+export type TemplateStatus = "draft" | "active" | "retired";
 
 export type Json =
   | string
@@ -439,6 +440,85 @@ export type Database = {
           },
         ];
       };
+      site_templates: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          status: TemplateStatus;
+          allowed_sections: Json;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          status?: TemplateStatus;
+          allowed_sections?: Json;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          status?: TemplateStatus;
+          allowed_sections?: Json;
+          description?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      business_template_assignments: {
+        Row: {
+          id: string;
+          business_id: string;
+          template_id: string;
+          assigned_at: string;
+          assigned_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          template_id: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          template_id?: string;
+          assigned_at?: string;
+          assigned_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_template_assignments_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "business_template_assignments_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "site_templates";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "business_template_assignments_assigned_by_fkey";
+            columns: ["assigned_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -459,6 +539,7 @@ export type Database = {
       platform_role: PlatformRole;
       booking_status: BookingStatus;
       booking_mode: BookingMode;
+      template_status: TemplateStatus;
     };
     CompositeTypes: Record<string, never>;
   };

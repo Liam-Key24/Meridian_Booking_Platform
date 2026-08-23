@@ -9,18 +9,36 @@ Secure, multi-tenant booking-request product used by Meridian client sites. The 
 ## Stack
 
 - **Next.js** (App Router) + **TypeScript**
-- **Tailwind CSS** with Meridian design tokens
+- **Tailwind CSS** with Meridian design tokens (`#16697A`, `#489FB5`, `#82C0CC`, `#FFA62B`, Plus Jakarta Sans)
 - **Supabase** (Auth, Postgres, RLS) — Meridian Platform Development
-- Transactional email / Stripe — later phases (not installed)
+- **Resend** — transactional booking emails (optional locally; required in production)
+- **Upstash Redis** — durable public booking rate limits (in-memory fallback locally)
+- **Cloudflare Turnstile** — anonymous public booking bot protection
 
 ## Current status
 
-**Phase 0–2** on `main`, with **Phase 3** client dashboard on feature branches as needed:
+Platform work through **hardening**, **dashboard analytics**, and **controlled templates** is implemented on feature branches (merge in order; do not assume `main` is current until merged):
 
-- Public booking requests (Pending)
-- Authenticated dashboard with pending queue, booking list/filters/detail, and settings
-- Multi-tenant RLS throughout
-- Stripe-ready architecture docs (no Stripe SDK)
+### Booking (public + client)
+
+- Public booking requests with validation, honeypot, idempotency keys, Turnstile, and durable rate limiting
+- Client authentication and multi-tenant businesses / memberships
+- Dashboard: pending queue, booking list/filters/detail, approve / decline / suggest-time / cancel
+- Internal calendar with day/week navigation
+- Booking modes: Meridian, external, hybrid (external URLs validated server-side)
+- Real dashboard analytics and charts from Supabase (no fabricated metrics)
+- Responsive sidebar shell (drawer on mobile)
+
+### Admin (Meridian)
+
+- Meridian admin routes (businesses, memberships, services, booking settings)
+- Booking CSV export, audit logs, email-delivery logs with safe retry
+- Controlled site-template registry and business assignment
+- Safe template preview (`/preview/[businessSlug]`) — no publish without an assigned active template
+
+### Still out of scope
+
+Google Calendar sync, Stripe / payments, SMS, live availability APIs, drag-and-drop site editors, and other external booking providers beyond a validated external URL.
 
 ## Local setup
 
@@ -37,9 +55,9 @@ npm install
 cp .env.example .env.local
 ```
 
-Fill `.env.local` from Meridian Platform Development only.
+Fill `.env.local` from Meridian Platform Development only. See [docs/operations.md](docs/operations.md) for production variables (Upstash, Turnstile, Resend).
 
-### Link Supabase
+### Link Supabase and apply migrations
 
 ```bash
 npx supabase login
@@ -47,7 +65,7 @@ npx supabase link --project-ref <MERIDIAN_PLATFORM_DEVELOPMENT_PROJECT_REF>
 npx supabase db push
 ```
 
-Confirm the linked project name is **Meridian Platform Development** before any remote command.
+Confirm the linked project name is **Meridian Platform Development** before any remote command. Migrations live under `supabase/migrations/` — never edit already-applied files; add a new migration instead.
 
 Local Docker alternative:
 
@@ -65,19 +83,16 @@ npm test
 npm run build
 ```
 
-See [docs/architecture.md](docs/architecture.md) and [docs/tenant-isolation.md](docs/tenant-isolation.md).
+RLS / tenant isolation procedures: [docs/tenant-isolation.md](docs/tenant-isolation.md).  
+Runbook (env, Resend, Upstash, Turnstile, email retry, templates, backups): [docs/operations.md](docs/operations.md).
 
-## Tenant model (Phase 1)
+## Tenant model
 
 ```text
-User → Membership → Business → Business-owned records (future)
+User → Membership → Business → Bookings / services / settings / template assignment
 ```
 
 Roles: `owner`, `staff` (membership) and `meridian_admin` (platform profile role).
-
-## Out of scope (later)
-
-Bookings, emails, Stripe SDK/Checkout/Connect, payments, calendar sync, Google APIs, live availability, SMS, floor plans.
 
 ## Environment variables
 
@@ -86,7 +101,13 @@ Bookings, emails, Stripe SDK/Checkout/Connect, payments, calendar sync, Google A
 | `NEXT_PUBLIC_SUPABASE_URL` | Meridian Platform Development URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser-safe key (RLS-scoped) |
 | `NEXT_PUBLIC_SITE_URL` | App origin |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key (browser) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only — never `NEXT_PUBLIC_` |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Transactional email (server-only) |
+| `TURNSTILE_SECRET_KEY` | Turnstile verify (server-only) |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable rate limit (server-only) |
+
+Local-only: `BOOKING_TURNSTILE_BYPASS=true` (never in production). Without Upstash locally, rate limiting falls back to in-memory (documented; not multi-instance safe).
 
 ## License
 

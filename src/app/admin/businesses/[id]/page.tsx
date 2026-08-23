@@ -3,6 +3,7 @@ import {
   AddMembershipForm,
   AdminServiceForm,
   AdminSettingsForm,
+  AdminTemplateAssignForm,
   BusinessStatusForm,
   MembershipRowForm,
 } from "@/components/admin/business-forms";
@@ -41,8 +42,13 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
     );
   }
 
-  const [{ data: settings }, { data: membershipRows }, { data: services }] =
-    await Promise.all([
+  const [
+    { data: settings },
+    { data: membershipRows },
+    { data: services },
+    { data: assignment },
+    { data: templates },
+  ] = await Promise.all([
       supabase
         .from("booking_settings")
         .select("*")
@@ -57,6 +63,16 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
         .from("services")
         .select("*")
         .eq("business_id", id)
+        .order("name"),
+      supabase
+        .from("business_template_assignments")
+        .select("template_id")
+        .eq("business_id", id)
+        .maybeSingle(),
+      supabase
+        .from("site_templates")
+        .select("id, name, slug")
+        .eq("status", "active")
         .order("name"),
     ]);
 
@@ -156,6 +172,15 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           )}
           <AddMembershipForm businessId={business.id} />
         </div>
+      </Card>
+
+      <Card title="Site template">
+        <AdminTemplateAssignForm
+          businessId={business.id}
+          businessSlug={business.slug}
+          assignedTemplateId={assignment?.template_id ?? null}
+          templates={templates ?? []}
+        />
       </Card>
 
       <Card title="Booking settings">
