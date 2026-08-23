@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { signOut } from "@/lib/auth/actions";
+import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
@@ -50,7 +51,6 @@ export function DashboardShell({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const titleId = useId();
-  const searchId = useId();
 
   useEffect(() => {
     if (!open) return;
@@ -195,26 +195,13 @@ export function DashboardShell({
               className="order-last w-full min-w-0 flex-1 basis-full md:order-none md:basis-0"
               role="search"
             >
-              <label htmlFor={searchId} className="sr-only">
-                Search bookings
-              </label>
-              <div className="relative mx-auto w-full max-w-xl">
-                <span
-                  className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-meridian-accent"
-                  aria-hidden
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M10 2a8 8 0 1 0 4.9 14.32l4.39 4.39 1.41-1.41-4.39-4.39A8 8 0 0 0 10 2Zm0 2a6 6 0 1 1 0 12A6 6 0 0 1 10 4Z" />
-                  </svg>
-                </span>
-                <input
-                  id={searchId}
-                  name="q"
-                  type="search"
-                  placeholder="Search bookings…"
-                  className="h-11 w-full rounded-meridian border border-meridian-border bg-meridian-surface-muted py-2 pr-3 pl-10 text-sm text-meridian-text placeholder:text-meridian-text-muted transition-[border-color,box-shadow] focus-visible:border-meridian-accent focus-visible:shadow-[0_0_0_3px_color-mix(in_srgb,var(--meridian-accent)_35%,transparent)] focus-visible:outline-none"
-                />
-              </div>
+              <BookingSearchAutocomplete
+                name="q"
+                placeholder="Search bookings…"
+                size="md"
+                className="mx-auto w-full max-w-xl"
+                inputClassName="bg-meridian-surface-muted"
+              />
             </form>
 
             <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">

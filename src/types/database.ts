@@ -213,6 +213,7 @@ export type Database = {
           preferred_date: string;
           preferred_time: string;
           guest_count: number | null;
+          assigned_table: string | null;
           notes: string | null;
           status: BookingStatus;
           suggested_date: string | null;
@@ -233,6 +234,7 @@ export type Database = {
           preferred_date: string;
           preferred_time: string;
           guest_count?: number | null;
+          assigned_table?: string | null;
           notes?: string | null;
           status?: BookingStatus;
           suggested_date?: string | null;
@@ -253,6 +255,7 @@ export type Database = {
           preferred_date?: string;
           preferred_time?: string;
           guest_count?: number | null;
+          assigned_table?: string | null;
           notes?: string | null;
           status?: BookingStatus;
           suggested_date?: string | null;
