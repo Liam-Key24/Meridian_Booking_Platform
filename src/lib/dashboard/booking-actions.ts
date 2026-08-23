@@ -542,6 +542,14 @@ export async function createManualBooking(
   const preferredDate = String(formData.get("preferredDate") ?? "").trim();
   const preferredTime = String(formData.get("preferredTime") ?? "").trim();
   const guestCountRaw = String(formData.get("guestCount") ?? "").trim();
+  const assignedTable =
+    String(formData.get("assignedTable") ?? "").trim() || null;
+  const allergies = normalizeAllergies(
+    String(formData.get("allergies") ?? "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const sendConfirmation = formData.get("sendConfirmation") === "on";
 
@@ -609,6 +617,8 @@ export async function createManualBooking(
       preferred_date: preferredDate,
       preferred_time: normalisedTime,
       guest_count: guestCount,
+      assigned_table: assignedTable,
+      allergies,
       notes,
       status: "confirmed",
       confirmed_at: now,
@@ -632,6 +642,8 @@ export async function createManualBooking(
       service_id: service.id,
       preferred_date: preferredDate,
       preferred_time: normalisedTime,
+      assigned_table: assignedTable,
+      allergies,
       source: "dashboard",
     },
   });
