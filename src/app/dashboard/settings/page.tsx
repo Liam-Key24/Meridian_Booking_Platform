@@ -1,5 +1,4 @@
 import {
-  Badge,
   Card,
   EmptyState,
   ErrorState,
@@ -22,7 +21,7 @@ export default async function DashboardSettingsPage() {
 
   if (!context) {
     return (
-      <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10">
+      <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10 lg:pl-12">
         <ErrorState
           title="No business membership"
           description="Your account is signed in but not linked to an active business."
@@ -39,9 +38,8 @@ export default async function DashboardSettingsPage() {
     .maybeSingle();
 
   return (
-    <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10">
+    <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10 lg:pl-12">
       <header className="space-y-2">
-        <Badge tone="accent">Settings</Badge>
         <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
           Business settings
         </h1>
@@ -51,10 +49,7 @@ export default async function DashboardSettingsPage() {
         </p>
       </header>
 
-      <Card
-        title="Hospitality configuration"
-        description="Keep venue hours and capacity in sync with the calendar and booking form."
-      >
+      <Card>
         {error ? (
           <ErrorState
             title="Could not load settings"
@@ -85,6 +80,7 @@ export default async function DashboardSettingsPage() {
                 ? parseWeeklyHours(settings.opening_hours)
                 : defaultWeeklyHours()
             }
+            kitchenCloseEnabled={Boolean(settings.kitchen_close_enabled)}
             kitchenCloseTimes={
               settings.kitchen_close_times &&
               typeof settings.kitchen_close_times === "object" &&
@@ -92,6 +88,7 @@ export default async function DashboardSettingsPage() {
                 ? parseKitchenCloseTimes(settings.kitchen_close_times)
                 : defaultKitchenCloseTimes()
             }
+            barHoursEnabled={Boolean(settings.bar_hours_enabled)}
             barOpeningHours={
               settings.bar_opening_hours &&
               typeof settings.bar_opening_hours === "object" &&

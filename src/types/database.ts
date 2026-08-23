@@ -135,7 +135,9 @@ export type Database = {
           custom_tables: Json;
           opening_hours: Json;
           kitchen_close_times: Json;
+          kitchen_close_enabled: boolean;
           bar_opening_hours: Json;
+          bar_hours_enabled: boolean;
           holidays: Json;
           max_bookings_per_day: number | null;
           max_party_size: number | null;
@@ -157,7 +159,9 @@ export type Database = {
           custom_tables?: Json;
           opening_hours?: Json;
           kitchen_close_times?: Json;
+          kitchen_close_enabled?: boolean;
           bar_opening_hours?: Json;
+          bar_hours_enabled?: boolean;
           holidays?: Json;
           max_bookings_per_day?: number | null;
           max_party_size?: number | null;
@@ -179,7 +183,9 @@ export type Database = {
           custom_tables?: Json;
           opening_hours?: Json;
           kitchen_close_times?: Json;
+          kitchen_close_enabled?: boolean;
           bar_opening_hours?: Json;
+          bar_hours_enabled?: boolean;
           holidays?: Json;
           max_bookings_per_day?: number | null;
           max_party_size?: number | null;

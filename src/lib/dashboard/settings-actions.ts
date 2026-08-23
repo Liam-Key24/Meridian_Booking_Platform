@@ -154,21 +154,30 @@ export async function updateBusinessSettings(
     };
   }
 
-  const barOpeningHours = weeklyHoursFromForm(formData, "bar");
-  if (!barOpeningHours) {
-    return {
-      status: "error",
-      message:
-        "Check bar opening times — each open day needs a valid open before close.",
-    };
+  const kitchenCloseEnabled = formData.get("kitchenCloseEnabled") === "on";
+  const barHoursEnabled = formData.get("barHoursEnabled") === "on";
+
+  let kitchenCloseTimes: ReturnType<typeof kitchenCloseFromForm> = {};
+  if (kitchenCloseEnabled) {
+    kitchenCloseTimes = kitchenCloseFromForm(formData);
+    if (!kitchenCloseTimes) {
+      return {
+        status: "error",
+        message: "Kitchen close times must use HH:MM format.",
+      };
+    }
   }
 
-  const kitchenCloseTimes = kitchenCloseFromForm(formData);
-  if (!kitchenCloseTimes) {
-    return {
-      status: "error",
-      message: "Kitchen close times must use HH:MM format.",
-    };
+  let barOpeningHours: ReturnType<typeof weeklyHoursFromForm> = {};
+  if (barHoursEnabled) {
+    barOpeningHours = weeklyHoursFromForm(formData, "bar");
+    if (!barOpeningHours) {
+      return {
+        status: "error",
+        message:
+          "Check bar opening times — each open day needs a valid open before close.",
+      };
+    }
   }
 
   const holidays = holidaysFromForm(formData);
@@ -204,8 +213,10 @@ export async function updateBusinessSettings(
       tables_6_seat: tables6Seat,
       custom_tables: customTables as unknown as Json,
       opening_hours: openingHours as unknown as Json,
-      kitchen_close_times: kitchenCloseTimes as unknown as Json,
-      bar_opening_hours: barOpeningHours as unknown as Json,
+      kitchen_close_enabled: kitchenCloseEnabled,
+      kitchen_close_times: (kitchenCloseTimes ?? {}) as unknown as Json,
+      bar_hours_enabled: barHoursEnabled,
+      bar_opening_hours: (barOpeningHours ?? {}) as unknown as Json,
       holidays: holidays as unknown as Json,
       max_bookings_per_day: maxBookingsPerDay,
       max_party_size: maxPartySize,

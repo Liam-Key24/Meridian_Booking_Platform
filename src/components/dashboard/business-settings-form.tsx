@@ -30,7 +30,9 @@ type SettingsFormProps = {
   tables6Seat: number;
   customTables: CustomTable[];
   openingHours: WeeklyHours;
+  kitchenCloseEnabled: boolean;
   kitchenCloseTimes: KitchenCloseTimes;
+  barHoursEnabled: boolean;
   barOpeningHours: WeeklyHours;
   holidays: HolidayEntry[];
   maxBookingsPerDay: number | null;
@@ -47,24 +49,72 @@ const initialState: SettingsActionState = {
 function Section({
   title,
   description,
+  action,
   children,
 }: {
   title: string;
   description?: string;
-  children: React.ReactNode;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   return (
     <section className="space-y-4 border-t border-meridian-border pt-6 first:border-t-0 first:pt-0">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold tracking-tight text-meridian-text">
-          {title}
-        </h3>
-        {description ? (
-          <p className="text-sm text-meridian-text-muted">{description}</p>
-        ) : null}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold tracking-tight text-meridian-text">
+            {title}
+          </h3>
+          {description ? (
+            <p className="text-sm text-meridian-text-muted">{description}</p>
+          ) : null}
+        </div>
+        {action ? <div className="shrink-0">{action}</div> : null}
       </div>
       {children}
     </section>
+  );
+}
+
+function OnOffToggle({
+  name,
+  checked,
+  disabled,
+  onChange,
+}: {
+  name: string;
+  checked: boolean;
+  disabled: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm select-none">
+      <span
+        className={
+          checked ? "font-medium text-meridian-text" : "text-meridian-text-muted"
+        }
+      >
+        {checked ? "On" : "Off"}
+      </span>
+      <span className="relative inline-flex h-7 w-12 shrink-0 items-center">
+        <input
+          type="checkbox"
+          name={name}
+          value="on"
+          checked={checked}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.checked)}
+          className="peer sr-only"
+        />
+        <span
+          aria-hidden
+          className="h-7 w-full rounded-full border border-meridian-border bg-meridian-surface-subtle transition-colors peer-checked:border-meridian-teal peer-checked:bg-meridian-teal peer-focus-visible:shadow-[var(--meridian-focus-ring)] peer-disabled:opacity-60"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0.5 left-0.5 size-6 rounded-full bg-meridian-surface shadow-sm transition-transform peer-checked:translate-x-5"
+        />
+      </span>
+    </label>
   );
 }
 
@@ -176,7 +226,9 @@ export function BusinessSettingsForm({
   tables6Seat,
   customTables: initialCustomTables,
   openingHours,
+  kitchenCloseEnabled: initialKitchenCloseEnabled,
   kitchenCloseTimes,
+  barHoursEnabled: initialBarHoursEnabled,
   barOpeningHours,
   holidays: initialHolidays,
   maxBookingsPerDay,
@@ -187,6 +239,12 @@ export function BusinessSettingsForm({
   const [state, formAction, pending] = useActionState(
     updateBusinessSettings,
     initialState,
+  );
+  const [kitchenCloseEnabled, setKitchenCloseEnabled] = useState(
+    initialKitchenCloseEnabled,
+  );
+  const [barHoursEnabled, setBarHoursEnabled] = useState(
+    initialBarHoursEnabled,
   );
   const [customTables, setCustomTables] = useState<CustomTable[]>(
     initialCustomTables.length > 0
@@ -203,8 +261,8 @@ export function BusinessSettingsForm({
     <form action={formAction} className="space-y-8">
       <input type="hidden" name="businessId" value={businessId} />
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-8">
+      <div className="grid gap-8 lg:grid-cols-2 lg:gap-x-12 lg:gap-y-10">
+        <div className="space-y-10">
           <Section
             title="Business contact"
             description="Shown to your team and used for guest follow-up."
@@ -419,7 +477,7 @@ export function BusinessSettingsForm({
           </Section>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           <Section
             title="Opening times"
             description="Venue hours that drive calendar day view and time slots."
@@ -434,22 +492,50 @@ export function BusinessSettingsForm({
           <Section
             title="Kitchen close times"
             description="Last orders for each day. Leave a day blank if the kitchen follows venue close."
+            action={
+              <OnOffToggle
+                name="kitchenCloseEnabled"
+                checked={kitchenCloseEnabled}
+                disabled={!canEdit}
+                onChange={setKitchenCloseEnabled}
+              />
+            }
           >
-            <KitchenCloseFields
-              times={kitchenCloseTimes}
-              disabled={!canEdit}
-            />
+            {kitchenCloseEnabled ? (
+              <KitchenCloseFields
+                times={kitchenCloseTimes}
+                disabled={!canEdit}
+              />
+            ) : (
+              <p className="text-sm text-meridian-text-muted">
+                Turn on to set kitchen close times separately from venue hours.
+              </p>
+            )}
           </Section>
 
           <Section
             title="Bar opening times"
             description="When the bar is available separately from the dining room."
+            action={
+              <OnOffToggle
+                name="barHoursEnabled"
+                checked={barHoursEnabled}
+                disabled={!canEdit}
+                onChange={setBarHoursEnabled}
+              />
+            }
           >
-            <WeeklyHoursFields
-              prefix="bar"
-              hours={barOpeningHours}
-              disabled={!canEdit}
-            />
+            {barHoursEnabled ? (
+              <WeeklyHoursFields
+                prefix="bar"
+                hours={barOpeningHours}
+                disabled={!canEdit}
+              />
+            ) : (
+              <p className="text-sm text-meridian-text-muted">
+                Turn on to set bar hours separately from venue opening times.
+              </p>
+            )}
           </Section>
 
           <Section
