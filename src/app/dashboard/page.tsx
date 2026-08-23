@@ -8,7 +8,6 @@ import {
 import {
   RequestsByDayChart,
   StatusDistributionChart,
-  TopServicesChart,
 } from "@/components/dashboard/charts";
 import {
   MetricCard,
@@ -140,18 +139,11 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           data={metrics.statusDistribution}
           rangeLabel={rangeLabel}
         />
-        <TopServicesChart data={metrics.topServices} rangeLabel={rangeLabel} />
         <RequestsByDayChart
           data={metrics.requestsByPeriod}
           rangeLabel={metrics.requestsPeriodLabel}
           period={metrics.requestsPeriod}
           week={week.from}
-          yAxisLabel="Tables"
-        />
-        <RequestsByDayChart
-          data={metrics.confirmedByDay}
-          rangeLabel={rangeLabel}
-          title="Confirmed bookings by preferred day"
           yAxisLabel="Tables"
         />
       </section>
