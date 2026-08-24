@@ -7,33 +7,43 @@ export type BookingStatus =
   | "confirmed"
   | "declined"
   | "cancelled"
-  | "suggested";
+  | "suggested"
+  | "no_show";
 export type BookingMode = "meridian" | "external" | "hybrid";
 export type TemplateStatus = "draft" | "active" | "retired";
 export type BusinessType =
-  | "salon"
   | "barber"
   | "hairdresser"
-  | "tattoo"
-  | "nails"
-  | "tanning"
-  | "restaurant";
+  | "beauty_salon"
+  | "tattoo_studio"
+  | "nail_salon"
+  | "tanning_studio"
+  | "restaurant"
+  | "cafe"
+  | "pub"
+  | "other";
 export type DashboardMode = "appointments" | "hospitality";
-export type BusinessCapabilityKey =
-  | "staff_assignment"
-  | "table_management"
-  | "allergy_notes"
-  | "guest_count"
-  | "manual_bookings"
-  | "external_booking"
-  | "calendar"
-  | "customer_notes";
 export type SubscriptionStatus =
-  | "trialing"
+  | "trial"
   | "active"
   | "past_due"
   | "cancelled"
-  | "inactive";
+  | "none";
+export type CapabilityKey =
+  | "booking_requests"
+  | "calendar"
+  | "services"
+  | "staff"
+  | "availability"
+  | "tables"
+  | "party_size"
+  | "allergies"
+  | "opening_hours"
+  | "kitchen_hours"
+  | "bar_hours"
+  | "external_booking_link"
+  | "email_notifications"
+  | "analytics";
 
 export type Json =
   | string
@@ -52,8 +62,9 @@ export type Database = {
           name: string;
           slug: string;
           status: BusinessStatus;
-          business_type: BusinessType;
+          business_type: BusinessType | null;
           dashboard_mode: DashboardMode;
+          subscription_status: SubscriptionStatus;
           created_at: string;
           updated_at: string;
         };
@@ -62,8 +73,9 @@ export type Database = {
           name: string;
           slug: string;
           status?: BusinessStatus;
-          business_type?: BusinessType;
+          business_type?: BusinessType | null;
           dashboard_mode?: DashboardMode;
+          subscription_status?: SubscriptionStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -72,12 +84,58 @@ export type Database = {
           name?: string;
           slug?: string;
           status?: BusinessStatus;
-          business_type?: BusinessType;
+          business_type?: BusinessType | null;
           dashboard_mode?: DashboardMode;
+          subscription_status?: SubscriptionStatus;
           created_at?: string;
           updated_at?: string;
         };
         Relationships: [];
+      };
+      business_capabilities: {
+        Row: {
+          id: string;
+          business_id: string;
+          capability_key: CapabilityKey;
+          enabled: boolean;
+          updated_by: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          capability_key: CapabilityKey;
+          enabled?: boolean;
+          updated_by?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          capability_key?: CapabilityKey;
+          enabled?: boolean;
+          updated_by?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_capabilities_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "business_capabilities_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -290,6 +348,7 @@ export type Database = {
           allergies: string[];
           notes: string | null;
           status: BookingStatus;
+          assigned_staff_user_id: string | null;
           suggested_date: string | null;
           suggested_time: string | null;
           privacy_consent_at: string | null;
@@ -312,6 +371,7 @@ export type Database = {
           allergies?: string[];
           notes?: string | null;
           status?: BookingStatus;
+          assigned_staff_user_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
@@ -334,6 +394,7 @@ export type Database = {
           allergies?: string[];
           notes?: string | null;
           status?: BookingStatus;
+          assigned_staff_user_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
@@ -597,152 +658,6 @@ export type Database = {
           },
         ];
       };
-      business_capabilities: {
-        Row: {
-          id: string;
-          business_id: string;
-          capability: BusinessCapabilityKey;
-          enabled: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          business_id: string;
-          capability: BusinessCapabilityKey;
-          enabled?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          business_id?: string;
-          capability?: BusinessCapabilityKey;
-          enabled?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "business_capabilities_business_id_fkey";
-            columns: ["business_id"];
-            isOneToOne: false;
-            referencedRelation: "businesses";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      business_staff: {
-        Row: {
-          id: string;
-          business_id: string;
-          display_name: string;
-          active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          business_id: string;
-          display_name: string;
-          active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          business_id?: string;
-          display_name?: string;
-          active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "business_staff_business_id_fkey";
-            columns: ["business_id"];
-            isOneToOne: false;
-            referencedRelation: "businesses";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      restaurant_tables: {
-        Row: {
-          id: string;
-          business_id: string;
-          label: string;
-          seats: number;
-          active: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          business_id: string;
-          label: string;
-          seats?: number;
-          active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          business_id?: string;
-          label?: string;
-          seats?: number;
-          active?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "restaurant_tables_business_id_fkey";
-            columns: ["business_id"];
-            isOneToOne: false;
-            referencedRelation: "businesses";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      business_subscriptions: {
-        Row: {
-          id: string;
-          business_id: string;
-          status: SubscriptionStatus;
-          plan_code: string;
-          current_period_end: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          business_id: string;
-          status?: SubscriptionStatus;
-          plan_code?: string;
-          current_period_end?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          business_id?: string;
-          status?: SubscriptionStatus;
-          plan_code?: string;
-          current_period_end?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "business_subscriptions_business_id_fkey";
-            columns: ["business_id"];
-            isOneToOne: true;
-            referencedRelation: "businesses";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -766,7 +681,7 @@ export type Database = {
       template_status: TemplateStatus;
       business_type: BusinessType;
       dashboard_mode: DashboardMode;
-      business_capability_key: BusinessCapabilityKey;
+      capability_key: CapabilityKey;
       subscription_status: SubscriptionStatus;
     };
     CompositeTypes: Record<string, never>;

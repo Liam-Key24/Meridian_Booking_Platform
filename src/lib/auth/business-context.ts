@@ -1,6 +1,18 @@
 import "server-only";
 
+import {
+  readActiveBusinessCookie,
+  writeActiveBusinessCookie,
+  clearActiveBusinessCookie,
+} from "@/lib/auth/active-business";
+import { isBusinessId } from "@/lib/auth/business-id";
 import { createClient } from "@/lib/supabase/server";
+import { loadBusinessCapabilities } from "@/lib/business/capabilities-server";
+import {
+  resolveDashboardMode,
+  type CapabilityMap,
+  type DashboardMode,
+} from "@/lib/business/modes";
 import type { MembershipRole, Tables } from "@/types/database";
 
 export type BusinessContext = {
@@ -13,6 +25,9 @@ export type BusinessContext = {
   business: Tables<"businesses">;
   role: MembershipRole;
   isMeridianAdmin: boolean;
+  /** Server-resolved effective mode — never from the browser. */
+  dashboardMode: DashboardMode;
+  capabilities: CapabilityMap;
 };
 
 export type AuthSnapshot = {
@@ -77,9 +92,43 @@ export async function getAuthSnapshot(): Promise<AuthSnapshot | null> {
 }
 
 /**
+ * Pick the active membership:
+ * 1. Explicit businessId argument (verified against memberships)
+ * 2. httpOnly active-business cookie (verified)
+ * 3. First active membership
+ *
+ * Never trusts browser-submitted mode. Never uses query-string mode.
+ */
+async function resolveMembershipMatch(
+  snapshot: AuthSnapshot,
+  businessId?: string,
+): Promise<AuthSnapshot["memberships"][number] | null> {
+  if (businessId) {
+    if (!isBusinessId(businessId)) return null;
+    return (
+      snapshot.memberships.find((item) => item.business.id === businessId) ??
+      null
+    );
+  }
+
+  const cookieId = await readActiveBusinessCookie();
+  if (cookieId) {
+    const fromCookie = snapshot.memberships.find(
+      (item) => item.business.id === cookieId,
+    );
+    if (fromCookie) return fromCookie;
+    // Stale cookie (removed membership) — drop it.
+    await clearActiveBusinessCookie();
+  }
+
+  return snapshot.memberships[0] ?? null;
+}
+
+/**
  * Resolve current business context.
- * If businessId is provided (route/query), membership is verified server-side.
- * If omitted, the user's first active membership is used.
+ * If businessId is provided, membership is verified server-side.
+ * If omitted, the active-business cookie is used when valid, else first membership.
+ * Dashboard mode and capabilities come from the business row / capability table.
  */
 export async function getBusinessContext(
   businessId?: string,
@@ -89,13 +138,28 @@ export async function getBusinessContext(
     return null;
   }
 
-  const match = businessId
-    ? snapshot.memberships.find((item) => item.business.id === businessId)
-    : snapshot.memberships[0];
-
+  const match = await resolveMembershipMatch(snapshot, businessId);
   if (!match) {
     return null;
   }
+
+  // Persist cookie when resolving implicitly so subsequent loads stay stable.
+  if (!businessId) {
+    const cookieId = await readActiveBusinessCookie();
+    if (cookieId !== match.business.id) {
+      try {
+        await writeActiveBusinessCookie(match.business.id);
+      } catch {
+        // Server Components may not always allow cookie writes; switch action will.
+      }
+    }
+  }
+
+  const dashboardMode = resolveDashboardMode(match.business);
+  const capabilities = await loadBusinessCapabilities(
+    match.business.id,
+    dashboardMode,
+  );
 
   return {
     user: snapshot.user,
@@ -104,6 +168,8 @@ export async function getBusinessContext(
     business: match.business,
     role: match.membership.role,
     isMeridianAdmin: snapshot.isMeridianAdmin,
+    dashboardMode,
+    capabilities,
   };
 }
 

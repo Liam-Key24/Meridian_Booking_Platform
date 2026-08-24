@@ -14,13 +14,27 @@ import {
   ListBullets,
   Phone,
   PlusCircle,
+  Scissors,
   SignOut,
   UserCircle,
+  UsersThree,
   type Icon,
 } from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
+import {
+  switchActiveBusiness,
+  type SwitchBusinessState,
+} from "@/lib/auth/switch-business";
 import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
+import {
+  HOSPITALITY_NAV,
+  pageTitleForPath,
+  type DashboardNavDef,
+  type DashboardNavKey,
+} from "@/components/dashboard/shared/dashboard-nav";
+import type { DashboardMode } from "@/lib/business/modes";
 import { cn } from "@/lib/cn";
+import { useActionState } from "react";
 
 export type DashboardShellProps = {
   businessName: string;
@@ -31,15 +45,25 @@ export type DashboardShellProps = {
   publicBookHref: string | null;
   accountName: string;
   accountTitle: string;
+  /** Server-resolved mode. Defaults to hospitality so existing UX is unchanged. */
+  dashboardMode?: DashboardMode;
+  navItems?: DashboardNavDef[];
+  /** Memberships available for switching (server-verified list). */
+  businesses?: Array<{ id: string; name: string }>;
+  activeBusinessId?: string | null;
   children: React.ReactNode;
 };
 
-const nav: Array<{ href: string; label: string; icon: Icon }> = [
-  { href: "/dashboard", label: "Dashboard", icon: House },
-  { href: "/dashboard/bookings", label: "Bookings", icon: ListBullets },
-  { href: "/dashboard/calendar", label: "Calendar", icon: CalendarBlank },
-  { href: "/dashboard/bookings/new", label: "New booking", icon: PlusCircle },
-];
+const NAV_ICONS: Record<DashboardNavKey, Icon> = {
+  dashboard: House,
+  bookings: ListBullets,
+  calendar: CalendarBlank,
+  new_booking: PlusCircle,
+  customers: UsersThree,
+  services: Scissors,
+  staff: UserCircle,
+  availability: Clock,
+};
 
 function isActive(pathname: string, href: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -65,11 +89,22 @@ export function DashboardShell({
   publicBookHref,
   accountName,
   accountTitle,
+  dashboardMode = "hospitality",
+  navItems,
+  businesses = [],
+  activeBusinessId = null,
   children,
 }: DashboardShellProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const titleId = useId();
+  const nav = navItems ?? HOSPITALITY_NAV;
+  const isAppointments = dashboardMode === "appointments";
+  const switchInitial: SwitchBusinessState = { status: "idle", message: null };
+  const [switchState, switchAction, switchPending] = useActionState(
+    switchActiveBusiness,
+    switchInitial,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -80,14 +115,14 @@ export function DashboardShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const pageTitle = (() => {
-    if (pathname.startsWith("/dashboard/calendar")) return "Calendar";
-    if (pathname.startsWith("/dashboard/bookings/new")) return "New booking";
-    if (pathname.startsWith("/dashboard/bookings/")) return "Booking detail";
-    if (pathname.startsWith("/dashboard/bookings")) return "Bookings";
-    if (pathname.startsWith("/dashboard/settings")) return "Settings";
-    return "Dashboard";
-  })();
+  const pageTitle = pageTitleForPath(pathname, dashboardMode);
+  const ModeIcon = isAppointments ? Scissors : ForkKnife;
+  const hoursLabel = isAppointments ? "Availability" : "Opening times";
+  const searchPlaceholder = isAppointments
+    ? "Search appointments…"
+    : "Search bookings…";
+  const addLabel = isAppointments ? "Add appointment" : "Add booking";
+  const productLabel = isAppointments ? "Appointments" : "Bookings";
 
   const sidebar = (
     <aside className="flex h-full w-72 flex-col gap-5 border-r border-meridian-border bg-meridian-surface px-5 py-6">
@@ -100,7 +135,9 @@ export function DashboardShell({
             <p className="text-xs font-semibold tracking-wide text-meridian-blue uppercase">
               Meridian
             </p>
-            <p className="text-sm font-semibold text-meridian-text">Bookings</p>
+            <p className="text-sm font-semibold text-meridian-text">
+              {productLabel}
+            </p>
           </div>
         </div>
 
@@ -108,10 +145,38 @@ export function DashboardShell({
           <div className="space-y-1">
             <p className="font-semibold text-meridian-text">{businessName}</p>
             <span className="inline-flex items-center gap-1.5 rounded-meridian-sm bg-meridian-surface px-2 py-1 text-[11px] font-semibold tracking-wide text-meridian-teal uppercase">
-              <ForkKnife className="size-3.5" weight="fill" aria-hidden />
+              <ModeIcon className="size-3.5" weight="fill" aria-hidden />
               {membershipLabel}
             </span>
           </div>
+
+          {businesses.length > 1 ? (
+            <form action={switchAction} className="space-y-1.5">
+              <label className="block text-[11px] font-semibold tracking-wide text-meridian-text-muted uppercase">
+                Active business
+                <select
+                  name="businessId"
+                  defaultValue={activeBusinessId ?? businesses[0]?.id}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-xs font-medium text-meridian-text"
+                  onChange={(event) => {
+                    event.currentTarget.form?.requestSubmit();
+                  }}
+                  disabled={switchPending}
+                >
+                  {businesses.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {switchState.status === "error" && switchState.message ? (
+                <p className="text-xs text-meridian-status-declined" role="alert">
+                  {switchState.message}
+                </p>
+              ) : null}
+            </form>
+          ) : null}
 
           <dl className="space-y-2 text-xs text-meridian-text-muted">
             <div className="flex items-start gap-2">
@@ -147,7 +212,7 @@ export function DashboardShell({
                 aria-hidden
               />
               <div>
-                <dt className="sr-only">Opening times</dt>
+                <dt className="sr-only">{hoursLabel}</dt>
                 <dd className="text-meridian-text">{openingLabel}</dd>
               </div>
             </div>
@@ -169,7 +234,7 @@ export function DashboardShell({
       <nav className="flex flex-1 flex-col gap-1" aria-label="Dashboard">
         {nav.map((item) => {
           const active = isActive(pathname, item.href);
-          const Icon = item.icon;
+          const Icon = NAV_ICONS[item.key];
           return (
             <Link
               key={item.href}
@@ -300,7 +365,7 @@ export function DashboardShell({
             >
               <BookingSearchAutocomplete
                 name="q"
-                placeholder="Search bookings…"
+                placeholder={searchPlaceholder}
                 size="md"
                 className="mx-auto w-full max-w-xl"
                 inputClassName="bg-meridian-surface-muted"
@@ -322,7 +387,7 @@ export function DashboardShell({
                 href="/dashboard/bookings/new"
                 className="inline-flex h-11 cursor-pointer items-center rounded-meridian bg-meridian-accent px-3 text-sm font-semibold text-meridian-text hover:brightness-105 sm:px-4"
               >
-                Add booking
+                {addLabel}
               </Link>
             </div>
           </div>

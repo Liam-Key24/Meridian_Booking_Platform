@@ -1,4 +1,4 @@
-import { EmptyState, ErrorState } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import {
   BookingsExplorer,
   type BookingsPeriod,
@@ -9,7 +9,7 @@ import {
 } from "@/lib/dashboard/bookings";
 import { resolveWeekRange } from "@/lib/dashboard/analytics-math";
 import { formatLocalDate } from "@/lib/dashboard/calendar";
-import { requireDashboardContext } from "@/lib/dashboard/require-context";
+import { requireDashboardCapability } from "@/lib/dashboard/require-context";
 import type { BookingStatus } from "@/types/database";
 
 type PageProps = {
@@ -33,6 +33,8 @@ function parseStatus(value?: string): Filters["status"] {
     "confirmed",
     "cancelled",
     "suggested",
+    "declined",
+    "no_show",
   ];
   if (allowed.includes(value as BookingStatus)) {
     return value as BookingStatus;
@@ -79,18 +81,7 @@ function resolveListRange(
 
 export default async function DashboardBookingsPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const context = await requireDashboardContext();
-
-  if (!context) {
-    return (
-      <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8">
-        <ErrorState
-          title="No business membership"
-          description="Your account is signed in but not linked to an active business."
-        />
-      </main>
-    );
-  }
+  const context = await requireDashboardCapability("booking_requests");
 
   const period = parsePeriod(params.period);
   const status = parseStatus(params.status);

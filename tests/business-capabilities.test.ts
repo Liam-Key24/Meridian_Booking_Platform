@@ -12,16 +12,16 @@ describe("business capabilities registry", () => {
   it("maps restaurant to hospitality defaults", () => {
     expect(defaultDashboardModeForType("restaurant")).toBe("hospitality");
     const caps = defaultCapabilitiesForType("restaurant");
-    expect(caps.table_management).toBe(true);
-    expect(caps.allergy_notes).toBe(true);
-    expect(caps.staff_assignment).toBe(false);
+    expect(caps.tables).toBe(true);
+    expect(caps.allergies).toBe(true);
+    expect(caps.staff).toBe(false);
   });
 
-  it("maps salon to appointments defaults", () => {
-    expect(defaultDashboardModeForType("salon")).toBe("appointments");
-    const caps = defaultCapabilitiesForType("salon");
-    expect(caps.table_management).toBe(false);
-    expect(caps.staff_assignment).toBe(true);
+  it("maps barber to appointments defaults", () => {
+    expect(defaultDashboardModeForType("barber")).toBe("appointments");
+    const caps = defaultCapabilitiesForType("barber");
+    expect(caps.tables).toBe(false);
+    expect(caps.staff).toBe(true);
     expect(caps.calendar).toBe(true);
   });
 
@@ -34,8 +34,10 @@ describe("business capabilities registry", () => {
 
   it("allow-lists types and capabilities", () => {
     expect(isBusinessType("restaurant")).toBe(true);
-    expect(isBusinessType("cafe")).toBe(false);
-    expect(isCapabilityKey("allergy_notes")).toBe(true);
+    expect(isBusinessType("cafe")).toBe(true);
+    expect(isBusinessType("salon")).toBe(false);
+    expect(isCapabilityKey("allergies")).toBe(true);
+    expect(isCapabilityKey("allergy_notes")).toBe(false);
     expect(isCapabilityKey("payments")).toBe(false);
   });
 });

@@ -3,128 +3,136 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import {
   CAPABILITY_KEYS,
+  capabilityMapFromKeys,
+  capabilityMapFromRows,
+  defaultCapabilitiesForMode,
+  hasCapability,
   type CapabilityKey,
-  defaultCapabilitiesForType,
-  type BusinessType,
-} from "@/lib/business/capabilities";
+  type CapabilityMap,
+  type DashboardMode,
+} from "@/lib/business/modes";
+import type { Json } from "@/types/database";
 
-export type CapabilityMap = Record<CapabilityKey, boolean>;
-
-export async function getBusinessCapabilities(
+export async function loadBusinessCapabilities(
   businessId: string,
+  fallbackMode: DashboardMode = "hospitality",
 ): Promise<CapabilityMap> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("business_capabilities")
-    .select("capability, enabled")
+    .select("capability_key, enabled")
     .eq("business_id", businessId);
 
-  const map = Object.fromEntries(
-    CAPABILITY_KEYS.map((key) => [key, false]),
-  ) as CapabilityMap;
-
-  for (const row of data ?? []) {
-    const key = row.capability as CapabilityKey;
-    if (CAPABILITY_KEYS.includes(key)) {
-      map[key] = Boolean(row.enabled);
-    }
+  if (error) {
+    console.error("[capabilities] load", error);
+    return capabilityMapFromKeys(defaultCapabilitiesForMode(fallbackMode));
   }
 
-  return map;
+  if (!data?.length) {
+    return capabilityMapFromKeys(defaultCapabilitiesForMode(fallbackMode));
+  }
+
+  return capabilityMapFromRows(data);
 }
 
-export function businessHasCapability(
-  capabilities: CapabilityMap,
-  key: CapabilityKey,
-): boolean {
-  return capabilities[key] === true;
-}
-
-/** Seed default capability rows for a new business (admin path). */
-export async function seedDefaultCapabilities(
+export async function requireCapability(
   businessId: string,
-  type: BusinessType,
-): Promise<void> {
+  key: CapabilityKey,
+  mode: DashboardMode = "hospitality",
+): Promise<CapabilityMap> {
+  const capabilities = await loadBusinessCapabilities(businessId, mode);
+  if (!hasCapability(capabilities, key)) {
+    throw new Error(`Capability disabled: ${key}`);
+  }
+  return capabilities;
+}
+
+/** Seed default capability rows for a business (admin create / mode change). */
+export async function seedDefaultCapabilities(params: {
+  businessId: string;
+  mode: DashboardMode;
+  updatedBy: string | null;
+}): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const defaults = defaultCapabilitiesForType(type);
-  const rows = CAPABILITY_KEYS.map((capability) => ({
-    business_id: businessId,
-    capability,
-    enabled: defaults[capability],
+  const keys = defaultCapabilitiesForMode(params.mode);
+  const rows = keys.map((capability_key) => ({
+    business_id: params.businessId,
+    capability_key,
+    enabled: true,
+    updated_by: params.updatedBy,
   }));
 
-  await supabase.from("business_capabilities").upsert(rows, {
-    onConflict: "business_id,capability",
+  const { error } = await supabase.from("business_capabilities").upsert(rows, {
+    onConflict: "business_id,capability_key",
   });
+
+  if (error) {
+    console.error("[capabilities] seed", error);
+    return { error: "Could not seed business capabilities." };
+  }
+  return { error: null };
 }
 
-export type CapabilityDisableWarning = {
-  capability: CapabilityKey;
-  warning: string;
-  existingCount: number;
-};
-
-/**
- * Warn before disabling a capability that already has related records.
- * Never deletes data when a capability is turned off.
- */
-export async function getCapabilityDisableWarnings(
-  businessId: string,
-  disabling: CapabilityKey[],
-): Promise<CapabilityDisableWarning[]> {
-  if (disabling.length === 0) return [];
-
+/** Replace enabled set to mode defaults (disables keys not in the default set). */
+export async function resetCapabilitiesToModeDefaults(params: {
+  businessId: string;
+  mode: DashboardMode;
+  updatedBy: string;
+}): Promise<{ error: string | null }> {
   const supabase = await createClient();
-  const warnings: CapabilityDisableWarning[] = [];
+  const enabled = new Set(defaultCapabilitiesForMode(params.mode));
 
-  for (const capability of disabling) {
-    if (capability === "allergy_notes") {
-      const { count } = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .not("allergies", "eq", "{}");
-      if ((count ?? 0) > 0) {
-        warnings.push({
-          capability,
-          existingCount: count ?? 0,
-          warning:
-            "Allergy notes already exist on bookings. Disabling hides them in the UI but does not delete data.",
-        });
-      }
-    }
+  const rows = CAPABILITY_KEYS.map((capability_key) => ({
+    business_id: params.businessId,
+    capability_key,
+    enabled: enabled.has(capability_key),
+    updated_by: params.updatedBy,
+  }));
 
-    if (capability === "table_management") {
-      const { count } = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", businessId)
-        .not("assigned_table", "is", null);
-      if ((count ?? 0) > 0) {
-        warnings.push({
-          capability,
-          existingCount: count ?? 0,
-          warning:
-            "Assigned tables already exist on bookings. Disabling hides table fields but does not delete data.",
-        });
-      }
-    }
+  const { error } = await supabase.from("business_capabilities").upsert(rows, {
+    onConflict: "business_id,capability_key",
+  });
 
-    if (capability === "staff_assignment") {
-      const { count } = await supabase
-        .from("business_staff")
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", businessId);
-      if ((count ?? 0) > 0) {
-        warnings.push({
-          capability,
-          existingCount: count ?? 0,
-          warning:
-            "Staff records exist. Disabling hides staff UI but does not delete data.",
-        });
-      }
-    }
+  if (error) {
+    console.error("[capabilities] reset", error);
+    return { error: "Could not update business capabilities." };
+  }
+  return { error: null };
+}
+
+export async function setBusinessCapability(params: {
+  businessId: string;
+  capabilityKey: CapabilityKey;
+  enabled: boolean;
+  updatedBy: string;
+}): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("business_capabilities").upsert(
+    {
+      business_id: params.businessId,
+      capability_key: params.capabilityKey,
+      enabled: params.enabled,
+      updated_by: params.updatedBy,
+    },
+    { onConflict: "business_id,capability_key" },
+  );
+
+  if (error) {
+    console.error("[capabilities] set", error);
+    return { error: "Could not update capability." };
   }
 
-  return warnings;
+  await supabase.from("audit_logs").insert({
+    business_id: params.businessId,
+    actor_user_id: params.updatedBy,
+    action: "admin.capability.update",
+    entity_type: "business_capability",
+    entity_id: params.businessId,
+    metadata: {
+      capability_key: params.capabilityKey,
+      enabled: params.enabled,
+    } as Json,
+  });
+
+  return { error: null };
 }

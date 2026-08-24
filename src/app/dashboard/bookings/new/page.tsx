@@ -1,6 +1,5 @@
 import { ManualBookingForm } from "@/components/dashboard/manual-booking-form";
-import { ErrorState } from "@/components/ui";
-import { requireDashboardContext } from "@/lib/dashboard/require-context";
+import { requireDashboardCapability } from "@/lib/dashboard/require-context";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = {
@@ -12,18 +11,7 @@ type PageProps = {
 
 export default async function NewManualBookingPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const context = await requireDashboardContext();
-
-  if (!context) {
-    return (
-      <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8">
-        <ErrorState
-          title="No business membership"
-          description="Your account is signed in but not linked to an active business."
-        />
-      </main>
-    );
-  }
+  const context = await requireDashboardCapability("booking_requests");
 
   const defaultDate =
     params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)

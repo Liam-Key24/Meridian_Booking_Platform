@@ -1,9 +1,20 @@
 # Appointments dashboard components
 
-Reserved for appointment-based businesses (barbers, salons, tattoo studios,
-and similar). Terminology: appointments, clients, services, staff, availability,
-duration, confirmed / pending / cancelled / no-show.
+Appointment-mode UI for barbers, salons, studios, and similar businesses.
 
-No hospitality terms (tables, covers, party size, kitchen, bar, allergy tags).
+## Contents
 
-Built in Phase 3 on branch `codex/meridian-platform-appointments-dashboard`.
+- `appointments-dashboard-home.tsx` — overview metrics, trends, pending/confirmed lists
+- `appointments-settings-panel.tsx` — settings without hospitality terms
+
+Supporting routes (appointments mode only):
+
+- `/dashboard/customers`
+- `/dashboard/services`
+- `/dashboard/staff`
+- `/dashboard/availability`
+
+Terminology: appointments, clients/customers, services, staff, availability,
+duration, confirmed, pending, cancelled, no-show.
+
+Do not surface tables, covers, party size, kitchen, bar, or allergy tags here.

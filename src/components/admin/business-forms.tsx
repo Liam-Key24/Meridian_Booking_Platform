@@ -6,9 +6,11 @@ import {
   addBusinessMembership,
   createBusiness,
   updateAdminBookingSettings,
+  updateBusinessCapabilities,
+  updateBusinessDashboardMode,
   updateBusinessMembership,
-  updateBusinessModeAndCapabilities,
   updateBusinessStatus,
+  updateBusinessSubscription,
   upsertAdminService,
   type AdminActionState,
 } from "@/lib/admin/actions";
@@ -18,12 +20,21 @@ import {
 } from "@/lib/templates/actions";
 import {
   BUSINESS_TYPES,
+  BUSINESS_TYPE_LABELS,
   CAPABILITY_KEYS,
   CAPABILITY_LABELS,
   DASHBOARD_MODES,
-  type CapabilityKey,
-} from "@/lib/business/capabilities";
-import type { BookingMode, BusinessType, DashboardMode } from "@/types/database";
+  DASHBOARD_MODE_LABELS,
+  SUBSCRIPTION_STATUSES,
+  SUBSCRIPTION_STATUS_LABELS,
+  type CapabilityMap,
+} from "@/lib/business/modes";
+import type {
+  BookingMode,
+  BusinessType,
+  DashboardMode,
+  SubscriptionStatus,
+} from "@/types/database";
 
 const initialState: AdminActionState = { status: "idle", message: null };
 
@@ -58,10 +69,11 @@ export function CreateBusinessForm() {
       <Select
         label="Business type"
         name="businessType"
+        required
         defaultValue="restaurant"
-        options={BUSINESS_TYPES.map((type) => ({
-          value: type,
-          label: type.charAt(0).toUpperCase() + type.slice(1),
+        options={BUSINESS_TYPES.map((value) => ({
+          value,
+          label: BUSINESS_TYPE_LABELS[value],
         }))}
       />
       <Input
@@ -79,81 +91,6 @@ export function CreateBusinessForm() {
       <Feedback state={state} />
       <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create business"}
-      </Button>
-    </form>
-  );
-}
-
-export function BusinessModeCapabilitiesForm({
-  businessId,
-  businessType,
-  dashboardMode,
-  capabilities,
-}: {
-  businessId: string;
-  businessType: BusinessType;
-  dashboardMode: DashboardMode;
-  capabilities: Record<CapabilityKey, boolean>;
-}) {
-  const [state, action, pending] = useActionState(
-    updateBusinessModeAndCapabilities,
-    initialState,
-  );
-  return (
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="businessId" value={businessId} />
-      <Select
-        label="Business type"
-        name="businessType"
-        defaultValue={businessType}
-        options={BUSINESS_TYPES.map((type) => ({
-          value: type,
-          label: type.charAt(0).toUpperCase() + type.slice(1),
-        }))}
-      />
-      <Select
-        label="Dashboard mode"
-        name="dashboardMode"
-        defaultValue={dashboardMode}
-        options={DASHBOARD_MODES.map((mode) => ({
-          value: mode,
-          label: mode === "hospitality" ? "Hospitality" : "Appointments",
-        }))}
-      />
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-meridian-text">
-          Capabilities (admin only)
-        </legend>
-        <p className="text-xs text-meridian-text-muted">
-          Business owners cannot grant themselves capabilities. Disabling a
-          capability hides UI but does not delete existing records.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {CAPABILITY_KEYS.map((key) => (
-            <label
-              key={key}
-              className="flex items-center gap-2 text-sm text-meridian-text"
-            >
-              <input
-                type="checkbox"
-                name={`capability_${key}`}
-                defaultChecked={capabilities[key]}
-              />
-              {CAPABILITY_LABELS[key]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      <label className="flex items-start gap-2 text-sm text-meridian-text">
-        <input type="checkbox" name="confirmDisable" className="mt-1" />
-        <span>
-          I confirm disabling capabilities that already have records (data is
-          preserved).
-        </span>
-      </label>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save mode & capabilities"}
       </Button>
     </form>
   );
@@ -189,6 +126,124 @@ export function BusinessStatusForm({
       <div className="w-full">
         <Feedback state={state} />
       </div>
+    </form>
+  );
+}
+
+export function BusinessDashboardModeForm({
+  businessId,
+  businessType,
+  dashboardMode,
+}: {
+  businessId: string;
+  businessType: BusinessType | null;
+  dashboardMode: DashboardMode;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessDashboardMode,
+    initialState,
+  );
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="businessId" value={businessId} />
+      <Select
+        label="Business type"
+        name="businessType"
+        defaultValue={businessType ?? "other"}
+        options={BUSINESS_TYPES.map((value) => ({
+          value,
+          label: BUSINESS_TYPE_LABELS[value],
+        }))}
+      />
+      <Select
+        label="Dashboard mode"
+        name="dashboardMode"
+        defaultValue={dashboardMode}
+        hint="Effective mode is enforced server-side. Changing mode resets capabilities to mode defaults."
+        options={DASHBOARD_MODES.map((value) => ({
+          value,
+          label: DASHBOARD_MODE_LABELS[value],
+        }))}
+      />
+      <label className="flex items-center gap-2 text-sm text-meridian-text">
+        <input type="checkbox" name="resetCapabilities" className="size-4" />
+        Force reset capabilities to mode defaults
+      </label>
+      <Feedback state={state} />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Update type and mode"}
+      </Button>
+    </form>
+  );
+}
+
+export function BusinessSubscriptionForm({
+  businessId,
+  subscriptionStatus,
+}: {
+  businessId: string;
+  subscriptionStatus: SubscriptionStatus;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessSubscription,
+    initialState,
+  );
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="businessId" value={businessId} />
+      <Select
+        label="Subscription status"
+        name="subscriptionStatus"
+        defaultValue={subscriptionStatus}
+        hint="Internal ops metadata only — not a payment integration."
+        options={SUBSCRIPTION_STATUSES.map((value) => ({
+          value,
+          label: SUBSCRIPTION_STATUS_LABELS[value],
+        }))}
+      />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Update subscription"}
+      </Button>
+      <div className="w-full">
+        <Feedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+export function BusinessCapabilitiesForm({
+  businessId,
+  capabilities,
+}: {
+  businessId: string;
+  capabilities: CapabilityMap;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessCapabilities,
+    initialState,
+  );
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="businessId" value={businessId} />
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {CAPABILITY_KEYS.map((key) => (
+          <li key={key}>
+            <label className="flex items-center gap-2 text-sm text-meridian-text">
+              <input
+                type="checkbox"
+                name={`cap_${key}`}
+                defaultChecked={capabilities[key]}
+                className="size-4"
+              />
+              {CAPABILITY_LABELS[key]}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <Feedback state={state} />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Save capabilities"}
+      </Button>
     </form>
   );
 }

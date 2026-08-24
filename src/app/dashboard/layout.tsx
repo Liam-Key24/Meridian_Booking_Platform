@@ -1,13 +1,19 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { getAuthSnapshot } from "@/lib/auth/business-context";
-import { membershipLabelForMode } from "@/lib/business/capabilities";
+import {
+  filterNavByCapabilities,
+  navForDashboardMode,
+} from "@/components/dashboard/shared/dashboard-nav";
+import {
+  getAuthSnapshot,
+  getBusinessContext,
+} from "@/lib/auth/business-context";
+import { membershipLabelForMode } from "@/lib/business/modes";
 import {
   defaultWeeklyHours,
   parseWeeklyHours,
   todayOpeningLabel,
 } from "@/lib/dashboard/hospitality-settings";
 import { createClient } from "@/lib/supabase/server";
-import type { DashboardMode } from "@/types/database";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -20,12 +26,13 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard");
   }
 
-  const membership = snapshot.memberships[0];
-  const business = membership?.business;
+  // Active business from verified cookie / membership — never from mode query.
+  const context = await getBusinessContext();
+  const business = context?.business;
   const businessName = business?.name ?? "Meridian";
-  const role = membership?.membership.role ?? "staff";
-  const dashboardMode =
-    (business?.dashboard_mode as DashboardMode | undefined) ?? "hospitality";
+  const role = context?.role ?? "staff";
+  const dashboardMode = context?.dashboardMode ?? "hospitality";
+  const capabilities = context?.capabilities;
 
   let notificationEmail: string | null = null;
   let contactPhone: string | null = null;
@@ -57,6 +64,16 @@ export default async function DashboardLayout({
     snapshot.user.email?.split("@")[0] ||
     "Account";
 
+  const businesses = snapshot.memberships.map((item) => ({
+    id: item.business.id,
+    name: item.business.name,
+  }));
+
+  const navItems = filterNavByCapabilities(
+    navForDashboardMode(dashboardMode),
+    capabilities,
+  );
+
   return (
     <DashboardShell
       businessName={businessName}
@@ -67,6 +84,10 @@ export default async function DashboardLayout({
       publicBookHref={publicBookHref}
       accountName={accountName}
       accountTitle={role === "owner" ? "Business owner" : "Staff"}
+      dashboardMode={dashboardMode}
+      navItems={navItems}
+      businesses={businesses}
+      activeBusinessId={business?.id ?? null}
     >
       {children}
     </DashboardShell>

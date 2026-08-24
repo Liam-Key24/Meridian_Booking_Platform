@@ -12,6 +12,7 @@ export type BookingStatus =
   | "confirmed"
   | "declined"
   | "cancelled"
-  | "suggested";
+  | "suggested"
+  | "no_show";
 
 export type BookingMode = "meridian" | "external" | "hybrid";
