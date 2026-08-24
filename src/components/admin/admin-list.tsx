@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import { EmptyState } from "@/components/ui";
 import { cn } from "@/lib/cn";
@@ -89,16 +90,16 @@ export function AdminListToolbar({
   searchSlot: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-meridian border border-meridian-border bg-meridian-surface px-3 py-2.5 sm:flex-row sm:items-end sm:justify-between">
-      <div className="flex w-full max-w-md flex-col gap-1 text-xs font-medium text-meridian-text-muted">
+    <div className="flex flex-col gap-3 rounded-meridian border border-meridian-border bg-meridian-surface px-3 py-2.5 lg:flex-row lg:items-end lg:justify-between">
+      {children ? (
+        <div className="flex flex-wrap items-end gap-2">{children}</div>
+      ) : (
+        <div />
+      )}
+      <div className="flex w-full max-w-md flex-col gap-1 text-xs font-medium text-meridian-text-muted lg:ml-auto">
         <span>Search</span>
         {searchSlot}
       </div>
-      {children ? (
-        <div className="flex flex-wrap items-end gap-2 sm:justify-end">
-          {children}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -110,6 +111,7 @@ export function AdminBookingSearchSlot({
   defaultValue?: string;
   placeholder?: string;
 }) {
+  const router = useRouter();
   return (
     <BookingSearchAutocomplete
       name="q"
@@ -120,7 +122,9 @@ export function AdminBookingSearchSlot({
       className="w-full"
       inputClassName="bg-meridian-surface"
       onSelectHit={(hit) => {
-        window.location.href = `/admin/bookings?q=${encodeURIComponent(hit.customer_name)}`;
+        router.push(
+          `/admin/bookings?q=${encodeURIComponent(hit.customer_name)}`,
+        );
       }}
     />
   );

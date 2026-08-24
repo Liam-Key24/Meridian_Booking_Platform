@@ -1,5 +1,4 @@
-import { Badge, Card, EmptyState } from "@/components/ui";
-import { EmailRetryButton } from "@/components/admin/email-retry-button";
+import { AdminEmailLogsList } from "@/components/admin/admin-email-logs-list";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,83 +14,23 @@ export default async function AdminEmailLogsPage() {
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const failedCount =
-    logs?.filter((log) => log.status === "failed" || log.status === "skipped")
-      .length ?? 0;
+  const rows = (logs ?? []).map((log) => {
+    const business = Array.isArray(log.businesses)
+      ? log.businesses[0]
+      : log.businesses;
+    return {
+      id: log.id,
+      email_type: log.email_type,
+      recipient_email: log.recipient_email,
+      status: log.status,
+      error_message: log.error_message,
+      last_error: log.last_error,
+      attempt_count: log.attempt_count,
+      last_attempt_at: log.last_attempt_at,
+      created_at: log.created_at,
+      business_name: business?.name ?? null,
+    };
+  });
 
-  return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-12">
-      <header className="space-y-2">
-        <Badge tone="accent">Email delivery</Badge>
-        <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
-          Email logs
-        </h1>
-        <p className="text-meridian-text-muted">
-          Latest 100 transactional email attempts. Failed and skipped sends can
-          be safely retried once.
-          {failedCount > 0 ? ` (${failedCount} failed/skipped in this page)` : ""}
-        </p>
-      </header>
-
-      <Card title="Recent sends">
-        {error ? (
-          <p className="text-sm text-meridian-status-declined">
-            Could not load email logs.
-          </p>
-        ) : !logs?.length ? (
-          <EmptyState
-            title="No email attempts logged"
-            description="Sends, skips (no Resend key), and failures appear after booking emails run."
-          />
-        ) : (
-          <ul className="divide-y divide-meridian-border">
-            {logs.map((log) => {
-              const business = Array.isArray(log.businesses)
-                ? log.businesses[0]
-                : log.businesses;
-              const tone =
-                log.status === "sent"
-                  ? "text-meridian-status-confirmed"
-                  : "text-meridian-status-declined";
-              const canRetry =
-                log.status === "failed" || log.status === "skipped";
-              return (
-                <li
-                  key={log.id}
-                  className="flex flex-wrap items-start justify-between gap-3 py-3"
-                >
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-meridian-text">
-                        {log.email_type}
-                      </p>
-                      <p className={`text-xs font-semibold uppercase ${tone}`}>
-                        {log.status}
-                      </p>
-                      <p className="text-xs text-meridian-text-muted">
-                        attempts: {log.attempt_count ?? 1}
-                      </p>
-                    </div>
-                    <p className="text-sm text-meridian-text-muted">
-                      {new Date(
-                        log.last_attempt_at ?? log.created_at,
-                      ).toLocaleString()}{" "}
-                      · {log.recipient_email}
-                      {business?.name ? ` · ${business.name}` : ""}
-                    </p>
-                    {log.last_error || log.error_message ? (
-                      <p className="text-sm text-meridian-status-declined">
-                        {log.last_error ?? log.error_message}
-                      </p>
-                    ) : null}
-                  </div>
-                  {canRetry ? <EmailRetryButton logId={log.id} /> : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
-    </main>
-  );
+  return <AdminEmailLogsList logs={rows} loadError={Boolean(error)} />;
 }

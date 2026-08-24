@@ -80,8 +80,8 @@ export function AdminEmailLogsList({
           />
         }
       >
-        <p className="pb-2 text-sm text-meridian-text-muted">
-          {filtered.length} of {logs.length}
+        <p className="pb-1 text-sm text-meridian-text-muted">
+          Showing {filtered.length} of {logs.length}
         </p>
       </AdminListToolbar>
 

@@ -50,11 +50,15 @@ describe("admin dashboard mode controls", () => {
 
   it("admin list shows type, mode, and subscription", () => {
     const page = readSrc("src/app/admin/page.tsx");
+    expect(page).toContain("AdminBusinessesList");
     expect(page).toContain("dashboard_mode");
     expect(page).toContain("subscription_status");
     expect(page).toContain("business_type");
-    expect(page).toContain("DASHBOARD_MODE_LABELS");
-    expect(page).toContain("SUBSCRIPTION_STATUS_LABELS");
+
+    const list = readSrc("src/components/admin/admin-businesses-list.tsx");
+    expect(list).toContain("DASHBOARD_MODE_LABELS");
+    expect(list).toContain("SUBSCRIPTION_STATUS_LABELS");
+    expect(list).toContain("AdminDataTable");
   });
 
   it("admin detail exposes metrics, capabilities, subscription, and audit", () => {

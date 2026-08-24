@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import {
   Buildings,
@@ -11,6 +11,7 @@ import {
   SignOut,
   type Icon,
 } from "@phosphor-icons/react";
+import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import { signOut } from "@/lib/auth/actions";
 import { cn } from "@/lib/cn";
 
@@ -68,6 +69,7 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const titleId = useId();
 
@@ -79,10 +81,6 @@ export function AdminShell({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   const pageTitle = pageTitleForPath(pathname);
 
@@ -116,6 +114,7 @@ export function AdminShell({
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={() => setOpen(false)}
                       className={cn(
                         "flex items-center gap-3 rounded-meridian-sm px-3 py-2.5 text-sm font-medium transition-colors",
                         active
@@ -203,17 +202,19 @@ export function AdminShell({
             </div>
 
             <div
-              className="order-last w-full min-w-0 flex-1 basis-full md:order-none md:basis-0"
+              className="order-last ml-auto w-full min-w-0 max-w-xl flex-1 basis-full md:order-none md:basis-0"
               role="search"
             >
               <BookingSearchAutocomplete
                 name="q"
                 placeholder="Search bookings…"
                 size="md"
-                className="mx-auto w-full max-w-xl"
+                className="w-full"
                 inputClassName="bg-meridian-surface-muted"
                 onSelectHit={(hit) => {
-                  window.location.href = `/admin/bookings?q=${encodeURIComponent(hit.customer_name)}`;
+                  router.push(
+                    `/admin/bookings?q=${encodeURIComponent(hit.customer_name)}`,
+                  );
                 }}
               />
             </div>
