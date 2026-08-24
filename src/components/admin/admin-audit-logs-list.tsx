@@ -11,6 +11,7 @@ import {
   useListSearchState,
   type AdminListColumn,
 } from "@/components/admin/admin-list";
+import { formatDateTime } from "@/lib/format/datetime";
 
 export type AuditLogRow = {
   id: string;
@@ -83,7 +84,7 @@ export function AdminAuditLogsList({
                   key="when"
                   className="text-meridian-text-muted tabular-nums"
                 >
-                  {new Date(log.created_at).toLocaleString()}
+                  {formatDateTime(log.created_at)}
                 </span>,
                 <span key="action" className="font-medium">
                   {log.action}

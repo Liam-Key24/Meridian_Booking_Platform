@@ -13,6 +13,7 @@ import {
   useListSearchState,
   type AdminListColumn,
 } from "@/components/admin/admin-list";
+import { formatDateTime } from "@/lib/format/datetime";
 
 export type EmailLogRow = {
   id: string;
@@ -106,9 +107,7 @@ export function AdminEmailLogsList({
                 cells={[
                   <div key="when" className="space-y-0.5">
                     <p className="text-meridian-text-muted tabular-nums">
-                      {new Date(
-                        log.last_attempt_at ?? log.created_at,
-                      ).toLocaleString()}
+                      {formatDateTime(log.last_attempt_at ?? log.created_at)}
                     </p>
                     <p className="text-xs text-meridian-text-muted">
                       attempts: {log.attempt_count ?? 1}

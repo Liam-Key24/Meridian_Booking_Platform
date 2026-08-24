@@ -33,6 +33,7 @@ import {
   SUBSCRIPTION_STATUS_LABELS,
 } from "@/lib/business/modes";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import { formatDateTime } from "@/lib/format/datetime";
 import { createClient } from "@/lib/supabase/server";
 import type {
   BusinessType,
@@ -46,7 +47,7 @@ type PageProps = {
 
 function formatWhen(value: string | null): string {
   if (!value) return "—";
-  return new Date(value).toLocaleString();
+  return formatDateTime(value);
 }
 
 function Section({
