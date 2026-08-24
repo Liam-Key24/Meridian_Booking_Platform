@@ -1,11 +1,35 @@
-import { createHash } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const LOCAL_DEV_HMAC_SECRET = "meridian-local-dev-rate-limit-secret";
 
 /**
- * Hash sensitive rate-limit identifiers so raw IPs/emails are never stored
- * in Redis keys or logs.
+ * Server-side HMAC secret for rate-limit identifiers.
+ * Production requires BOOKING_RATE_LIMIT_SECRET (fail closed upstream).
+ * Local/dev may omit it and use an explicit non-production default.
+ */
+export function getRateLimitHmacSecret(): string | null {
+  const configured = process.env.BOOKING_RATE_LIMIT_SECRET?.trim();
+  if (configured && configured.length >= 16) {
+    return configured;
+  }
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
+  return LOCAL_DEV_HMAC_SECRET;
+}
+
+/**
+ * HMAC-SHA256 hash of a rate-limit identifier.
+ * Never store raw IPs/emails in Redis keys or logs.
  */
 export function hashRateLimitIdentifier(value: string): string {
-  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+  const secret = getRateLimitHmacSecret();
+  if (!secret) {
+    throw new Error("BOOKING_RATE_LIMIT_SECRET is required in production");
+  }
+  return createHmac("sha256", secret)
+    .update(value.trim().toLowerCase())
+    .digest("hex");
 }
 
 export function buildIpRateLimitKey(businessSlug: string, ip: string): string {
@@ -17,4 +41,12 @@ export function buildEmailRateLimitKey(
   email: string,
 ): string {
   return `rl:book:email:${businessSlug}:${hashRateLimitIdentifier(email)}`;
+}
+
+/** Test helper — compare two digests without leaking timing. */
+export function digestsEqual(a: string, b: string): boolean {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  if (left.length !== right.length) return false;
+  return timingSafeEqual(left, right);
 }

@@ -39,7 +39,12 @@ describe("validateExternalBookingUrl", () => {
 });
 
 describe("rate limit keys", () => {
-  it("hashes identifiers so raw IP/email are not in keys", () => {
+  afterEach(() => {
+    delete process.env.BOOKING_RATE_LIMIT_SECRET;
+  });
+
+  it("HMAC-hashes identifiers so raw IP/email are not in keys", () => {
+    process.env.BOOKING_RATE_LIMIT_SECRET = "test-secret-at-least-16";
     const ipKey = buildIpRateLimitKey("business-a", "203.0.113.10");
     const emailKey = buildEmailRateLimitKey("business-a", "Ada@Example.com");
     expect(ipKey).not.toContain("203.0.113.10");
@@ -53,9 +58,11 @@ describe("durable rate limit (memory fallback)", () => {
     __resetMemoryRateLimitForTests();
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.BOOKING_RATE_LIMIT_SECRET;
   });
 
   it("allows requests under the limit and blocks over the limit", async () => {
+    process.env.BOOKING_RATE_LIMIT_SECRET = "test-secret-at-least-16";
     const key = "rl:test:memory";
     for (let i = 0; i < 3; i += 1) {
       const result = await assertWithinRateLimit({
@@ -71,7 +78,10 @@ describe("durable rate limit (memory fallback)", () => {
       windowMs: 60_000,
     });
     expect(blocked.ok).toBe(false);
-    if (!blocked.ok) expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+    if (!blocked.ok) {
+      expect(blocked.reason).toBe("rate_limited");
+      expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+    }
   });
 });
 
