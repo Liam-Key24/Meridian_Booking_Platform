@@ -63,7 +63,7 @@ describe("admin dashboard mode controls", () => {
     expect(page).toContain("listBusinessAuditHistory");
     expect(page).toContain("BusinessCapabilitiesForm");
     expect(page).toContain("BusinessSubscriptionForm");
-    expect(page).toContain("no customer contact details shown here");
+    expect(page).toContain("No customer contact details shown here");
     expect(page).toContain("Live metrics");
     expect(page).toContain("MetricCard");
   });
