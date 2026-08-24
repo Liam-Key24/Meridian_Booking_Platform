@@ -10,6 +10,30 @@ export type BookingStatus =
   | "suggested";
 export type BookingMode = "meridian" | "external" | "hybrid";
 export type TemplateStatus = "draft" | "active" | "retired";
+export type BusinessType =
+  | "salon"
+  | "barber"
+  | "hairdresser"
+  | "tattoo"
+  | "nails"
+  | "tanning"
+  | "restaurant";
+export type DashboardMode = "appointments" | "hospitality";
+export type BusinessCapabilityKey =
+  | "staff_assignment"
+  | "table_management"
+  | "allergy_notes"
+  | "guest_count"
+  | "manual_bookings"
+  | "external_booking"
+  | "calendar"
+  | "customer_notes";
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "cancelled"
+  | "inactive";
 
 export type Json =
   | string
@@ -28,6 +52,8 @@ export type Database = {
           name: string;
           slug: string;
           status: BusinessStatus;
+          business_type: BusinessType;
+          dashboard_mode: DashboardMode;
           created_at: string;
           updated_at: string;
         };
@@ -36,6 +62,8 @@ export type Database = {
           name: string;
           slug: string;
           status?: BusinessStatus;
+          business_type?: BusinessType;
+          dashboard_mode?: DashboardMode;
           created_at?: string;
           updated_at?: string;
         };
@@ -44,6 +72,8 @@ export type Database = {
           name?: string;
           slug?: string;
           status?: BusinessStatus;
+          business_type?: BusinessType;
+          dashboard_mode?: DashboardMode;
           created_at?: string;
           updated_at?: string;
         };
@@ -567,6 +597,152 @@ export type Database = {
           },
         ];
       };
+      business_capabilities: {
+        Row: {
+          id: string;
+          business_id: string;
+          capability: BusinessCapabilityKey;
+          enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          capability: BusinessCapabilityKey;
+          enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          capability?: BusinessCapabilityKey;
+          enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_capabilities_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      business_staff: {
+        Row: {
+          id: string;
+          business_id: string;
+          display_name: string;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          display_name: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          display_name?: string;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_staff_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      restaurant_tables: {
+        Row: {
+          id: string;
+          business_id: string;
+          label: string;
+          seats: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          label: string;
+          seats?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          label?: string;
+          seats?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_tables_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      business_subscriptions: {
+        Row: {
+          id: string;
+          business_id: string;
+          status: SubscriptionStatus;
+          plan_code: string;
+          current_period_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          status?: SubscriptionStatus;
+          plan_code?: string;
+          current_period_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          status?: SubscriptionStatus;
+          plan_code?: string;
+          current_period_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_subscriptions_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -588,6 +764,10 @@ export type Database = {
       booking_status: BookingStatus;
       booking_mode: BookingMode;
       template_status: TemplateStatus;
+      business_type: BusinessType;
+      dashboard_mode: DashboardMode;
+      business_capability_key: BusinessCapabilityKey;
+      subscription_status: SubscriptionStatus;
     };
     CompositeTypes: Record<string, never>;
   };

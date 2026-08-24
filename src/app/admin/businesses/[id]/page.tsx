@@ -4,6 +4,7 @@ import {
   AdminServiceForm,
   AdminSettingsForm,
   AdminTemplateAssignForm,
+  BusinessModeCapabilitiesForm,
   BusinessStatusForm,
   MembershipRowForm,
 } from "@/components/admin/business-forms";
@@ -14,7 +15,9 @@ import {
   ErrorState,
 } from "@/components/ui";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import { CAPABILITY_KEYS, type CapabilityKey } from "@/lib/business/capabilities";
 import { createClient } from "@/lib/supabase/server";
+import type { BusinessType, DashboardMode } from "@/types/database";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -48,6 +51,7 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
     { data: services },
     { data: assignment },
     { data: templates },
+    { data: capabilityRows },
   ] = await Promise.all([
       supabase
         .from("booking_settings")
@@ -74,7 +78,21 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
         .select("id, name, slug")
         .eq("status", "active")
         .order("name"),
+      supabase
+        .from("business_capabilities")
+        .select("capability, enabled")
+        .eq("business_id", id),
     ]);
+
+  const capabilities = Object.fromEntries(
+    CAPABILITY_KEYS.map((key) => [key, false]),
+  ) as Record<CapabilityKey, boolean>;
+  for (const row of capabilityRows ?? []) {
+    const key = row.capability as CapabilityKey;
+    if (CAPABILITY_KEYS.includes(key)) {
+      capabilities[key] = Boolean(row.enabled);
+    }
+  }
 
   const userIds = (membershipRows ?? []).map((row) => row.user_id);
   const { data: profiles } =
@@ -132,6 +150,20 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
 
       <Card title="Status">
         <BusinessStatusForm businessId={business.id} status={business.status} />
+      </Card>
+
+      <Card title="Mode & capabilities">
+        <BusinessModeCapabilitiesForm
+          businessId={business.id}
+          businessType={
+            (business.business_type as BusinessType | undefined) ?? "restaurant"
+          }
+          dashboardMode={
+            (business.dashboard_mode as DashboardMode | undefined) ??
+            "hospitality"
+          }
+          capabilities={capabilities}
+        />
       </Card>
 
       <Card title="Members">
