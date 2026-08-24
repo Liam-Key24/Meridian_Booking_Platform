@@ -13,6 +13,7 @@ import { PASSWORD_RESET_AVAILABLE } from "@/lib/auth/password-reset";
 import {
   getDefaultPostLoginPath,
   getSafeRedirectPath,
+  resolvePostLoginDestination,
   resolvePostLoginPath,
 } from "@/lib/auth/safe-redirect";
 
@@ -71,6 +72,58 @@ describe("resolvePostLoginPath", () => {
     expect(resolvePostLoginPath("https://evil.test")).toBe(
       getDefaultPostLoginPath(),
     );
+  });
+});
+
+describe("resolvePostLoginDestination", () => {
+  it("sends Meridian admins without membership to /admin by default", () => {
+    expect(
+      resolvePostLoginDestination({
+        next: null,
+        isMeridianAdmin: true,
+        hasBusinessMembership: false,
+      }),
+    ).toBe("/admin");
+  });
+
+  it("keeps business users on /dashboard by default", () => {
+    expect(
+      resolvePostLoginDestination({
+        next: null,
+        isMeridianAdmin: false,
+        hasBusinessMembership: true,
+      }),
+    ).toBe("/dashboard");
+  });
+
+  it("does not strand admins without membership on /dashboard next", () => {
+    expect(
+      resolvePostLoginDestination({
+        next: "/dashboard",
+        isMeridianAdmin: true,
+        hasBusinessMembership: false,
+      }),
+    ).toBe("/admin");
+  });
+
+  it("allows admins with membership to open /dashboard", () => {
+    expect(
+      resolvePostLoginDestination({
+        next: "/dashboard/calendar",
+        isMeridianAdmin: true,
+        hasBusinessMembership: true,
+      }),
+    ).toBe("/dashboard/calendar");
+  });
+
+  it("preserves explicit /admin next for role checks on the admin layout", () => {
+    expect(
+      resolvePostLoginDestination({
+        next: "/admin",
+        isMeridianAdmin: false,
+        hasBusinessMembership: true,
+      }),
+    ).toBe("/admin");
   });
 });
 

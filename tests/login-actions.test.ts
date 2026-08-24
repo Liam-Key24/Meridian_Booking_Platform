@@ -8,6 +8,7 @@ const redirectMock = vi.fn((path: string) => {
 
 const signInWithPasswordMock = vi.fn();
 const signOutMock = vi.fn();
+const getAuthSnapshotMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   redirect: (path: string) => redirectMock(path),
@@ -22,6 +23,10 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
+vi.mock("@/lib/auth/business-context", () => ({
+  getAuthSnapshot: () => getAuthSnapshotMock(),
+}));
+
 import { signIn, signOut } from "@/lib/auth/actions";
 import { GENERIC_AUTH_ERROR } from "@/lib/auth/login-validation";
 
@@ -33,11 +38,27 @@ function formDataFrom(entries: Record<string, string>) {
   return formData;
 }
 
+function businessSnapshot() {
+  return {
+    isMeridianAdmin: false,
+    memberships: [{ business: { id: "b1" } }],
+  };
+}
+
+function adminOnlySnapshot() {
+  return {
+    isMeridianAdmin: true,
+    memberships: [],
+  };
+}
+
 describe("signIn server action", () => {
   beforeEach(() => {
     redirectMock.mockClear();
     signInWithPasswordMock.mockReset();
     signOutMock.mockReset();
+    getAuthSnapshotMock.mockReset();
+    getAuthSnapshotMock.mockResolvedValue(businessSnapshot());
   });
 
   it("redirects clients to a safe internal next path on success", async () => {
@@ -62,6 +83,7 @@ describe("signIn server action", () => {
 
   it("preserves /admin as next so server-side admin checks can run", async () => {
     signInWithPasswordMock.mockResolvedValue({ error: null });
+    getAuthSnapshotMock.mockResolvedValue(adminOnlySnapshot());
 
     await expect(
       signIn(
@@ -75,7 +97,22 @@ describe("signIn server action", () => {
     ).rejects.toThrow(/NEXT_REDIRECT:\/admin/);
   });
 
-  it("rejects external next values and uses the default destination", async () => {
+  it("sends Meridian admins without membership to /admin by default", async () => {
+    signInWithPasswordMock.mockResolvedValue({ error: null });
+    getAuthSnapshotMock.mockResolvedValue(adminOnlySnapshot());
+
+    await expect(
+      signIn(
+        { error: null },
+        formDataFrom({
+          email: "admin@meridian.test",
+          password: "Password123!",
+        }),
+      ),
+    ).rejects.toThrow(/NEXT_REDIRECT:\/admin/);
+  });
+
+  it("rejects external next values and uses the role-aware default destination", async () => {
     signInWithPasswordMock.mockResolvedValue({ error: null });
 
     await expect(
@@ -106,6 +143,7 @@ describe("signIn server action", () => {
 
     expect(result).toEqual({ error: GENERIC_AUTH_ERROR, field: "form" });
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(getAuthSnapshotMock).not.toHaveBeenCalled();
   });
 
   it("validates empty credentials without calling Supabase", async () => {

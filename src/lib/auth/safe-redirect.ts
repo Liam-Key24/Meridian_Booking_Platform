@@ -1,4 +1,5 @@
-const DEFAULT_POST_LOGIN_PATH = "/dashboard";
+const DEFAULT_BUSINESS_HOME = "/dashboard";
+const DEFAULT_ADMIN_HOME = "/admin";
 
 /**
  * Accept only safe internal paths for post-login redirects.
@@ -6,7 +7,7 @@ const DEFAULT_POST_LOGIN_PATH = "/dashboard";
  */
 export function getSafeRedirectPath(
   raw: unknown,
-  fallback: string = DEFAULT_POST_LOGIN_PATH,
+  fallback: string = DEFAULT_BUSINESS_HOME,
 ): string {
   if (typeof raw !== "string") {
     return fallback;
@@ -50,16 +51,37 @@ export function getSafeRedirectPath(
   return value;
 }
 
-export function getDefaultPostLoginPath(): string {
-  return DEFAULT_POST_LOGIN_PATH;
+export function getDefaultPostLoginPath(isMeridianAdmin = false): string {
+  return isMeridianAdmin ? DEFAULT_ADMIN_HOME : DEFAULT_BUSINESS_HOME;
 }
 
 /**
- * Resolve the post-login destination from a raw `next` value.
- * Admin authorization is never decided here — `/admin` remains a valid
- * internal next so authenticated non-admins still hit the server-side
- * protected-access response.
+ * Resolve post-login destination from a raw `next` value and server-known role.
+ * Meridian admins without a business membership are never stranded on /dashboard.
  */
+export function resolvePostLoginDestination(options: {
+  next: unknown;
+  isMeridianAdmin: boolean;
+  hasBusinessMembership: boolean;
+}): string {
+  const defaultHome = getDefaultPostLoginPath(options.isMeridianAdmin);
+  const candidate = getSafeRedirectPath(options.next, defaultHome);
+
+  const wantsDashboard =
+    candidate === "/dashboard" || candidate.startsWith("/dashboard/");
+
+  if (
+    wantsDashboard &&
+    options.isMeridianAdmin &&
+    !options.hasBusinessMembership
+  ) {
+    return DEFAULT_ADMIN_HOME;
+  }
+
+  return candidate;
+}
+
+/** @deprecated Prefer resolvePostLoginDestination with role context. */
 export function resolvePostLoginPath(next: unknown): string {
   return getSafeRedirectPath(next);
 }

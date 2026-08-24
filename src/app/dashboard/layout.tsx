@@ -26,6 +26,12 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard");
   }
 
+  // Platform admins without a business membership belong in /admin, not the
+  // empty business-dashboard membership error.
+  if (snapshot.isMeridianAdmin && snapshot.memberships.length === 0) {
+    redirect("/admin");
+  }
+
   // Active business from verified cookie / membership — never from mode query.
   const context = await getBusinessContext();
   const business = context?.business;

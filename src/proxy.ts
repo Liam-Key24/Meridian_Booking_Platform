@@ -1,9 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import {
-  getDefaultPostLoginPath,
-  getSafeRedirectPath,
-} from "@/lib/auth/safe-redirect";
+import { resolvePostLoginDestination } from "@/lib/auth/safe-redirect";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin"];
 
@@ -64,10 +61,24 @@ export async function proxy(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname === "/login" && user) {
-    const destination = getSafeRedirectPath(
-      request.nextUrl.searchParams.get("next"),
-      getDefaultPostLoginPath(),
-    );
+    const [{ data: profile }, { count: membershipCount }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("platform_role")
+        .eq("id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("business_memberships")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "active"),
+    ]);
+
+    const destination = resolvePostLoginDestination({
+      next: request.nextUrl.searchParams.get("next"),
+      isMeridianAdmin: profile?.platform_role === "meridian_admin",
+      hasBusinessMembership: (membershipCount ?? 0) > 0,
+    });
     return NextResponse.redirect(new URL(destination, request.nextUrl.origin));
   }
 
