@@ -4,6 +4,7 @@ import {
   AdminServiceForm,
   AdminSettingsForm,
   AdminTemplateAssignForm,
+  BusinessDashboardModeForm,
   BusinessStatusForm,
   MembershipRowForm,
 } from "@/components/admin/business-forms";
@@ -13,8 +14,10 @@ import {
   EmptyState,
   ErrorState,
 } from "@/components/ui";
+import { DASHBOARD_MODE_LABELS, BUSINESS_TYPE_LABELS } from "@/lib/business/modes";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
 import { createClient } from "@/lib/supabase/server";
+import type { BusinessType, DashboardMode } from "@/types/database";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -101,6 +104,16 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
           <Badge tone={business.status === "active" ? "teal" : "soft"}>
             {business.status}
           </Badge>
+          <Badge tone="soft">
+            {DASHBOARD_MODE_LABELS[business.dashboard_mode as DashboardMode] ??
+              "Hospitality"}
+          </Badge>
+          {business.business_type ? (
+            <Badge tone="soft">
+              {BUSINESS_TYPE_LABELS[business.business_type as BusinessType] ??
+                business.business_type}
+            </Badge>
+          ) : null}
         </div>
         <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
           {business.name}
@@ -132,6 +145,20 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
 
       <Card title="Status">
         <BusinessStatusForm businessId={business.id} status={business.status} />
+      </Card>
+
+      <Card
+        title="Dashboard mode"
+        description="Type and mode are server-authoritative. Capability defaults reset when mode changes."
+      >
+        <BusinessDashboardModeForm
+          businessId={business.id}
+          businessType={(business.business_type as BusinessType | null) ?? null}
+          dashboardMode={
+            (business.dashboard_mode as DashboardMode | undefined) ??
+            "hospitality"
+          }
+        />
       </Card>
 
       <Card title="Members">

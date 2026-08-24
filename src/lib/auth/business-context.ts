@@ -1,6 +1,12 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { loadBusinessCapabilities } from "@/lib/business/capabilities-server";
+import {
+  resolveDashboardMode,
+  type CapabilityMap,
+  type DashboardMode,
+} from "@/lib/business/modes";
 import type { MembershipRole, Tables } from "@/types/database";
 
 export type BusinessContext = {
@@ -13,6 +19,9 @@ export type BusinessContext = {
   business: Tables<"businesses">;
   role: MembershipRole;
   isMeridianAdmin: boolean;
+  /** Server-resolved effective mode — never from the browser. */
+  dashboardMode: DashboardMode;
+  capabilities: CapabilityMap;
 };
 
 export type AuthSnapshot = {
@@ -80,6 +89,7 @@ export async function getAuthSnapshot(): Promise<AuthSnapshot | null> {
  * Resolve current business context.
  * If businessId is provided (route/query), membership is verified server-side.
  * If omitted, the user's first active membership is used.
+ * Dashboard mode and capabilities come from the business row / capability table.
  */
 export async function getBusinessContext(
   businessId?: string,
@@ -97,6 +107,12 @@ export async function getBusinessContext(
     return null;
   }
 
+  const dashboardMode = resolveDashboardMode(match.business);
+  const capabilities = await loadBusinessCapabilities(
+    match.business.id,
+    dashboardMode,
+  );
+
   return {
     user: snapshot.user,
     profile: snapshot.profile,
@@ -104,6 +120,8 @@ export async function getBusinessContext(
     business: match.business,
     role: match.membership.role,
     isMeridianAdmin: snapshot.isMeridianAdmin,
+    dashboardMode,
+    capabilities,
   };
 }
 

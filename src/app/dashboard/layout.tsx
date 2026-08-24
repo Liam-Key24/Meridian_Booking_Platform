@@ -1,6 +1,10 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import {
+  membershipLabelForMode,
+  resolveDashboardMode,
+} from "@/lib/business/modes";
+import {
   defaultWeeklyHours,
   parseWeeklyHours,
   todayOpeningLabel,
@@ -22,6 +26,9 @@ export default async function DashboardLayout({
   const business = membership?.business;
   const businessName = business?.name ?? "Meridian";
   const role = membership?.membership.role ?? "staff";
+  const dashboardMode = business
+    ? resolveDashboardMode(business)
+    : "hospitality";
 
   let notificationEmail: string | null = null;
   let contactPhone: string | null = null;
@@ -59,7 +66,7 @@ export default async function DashboardLayout({
       notificationEmail={notificationEmail}
       contactPhone={contactPhone}
       openingLabel={openingLabel}
-      membershipLabel="Hospitality"
+      membershipLabel={membershipLabelForMode(dashboardMode)}
       publicBookHref={publicBookHref}
       accountName={accountName}
       accountTitle={role === "owner" ? "Business owner" : "Staff"}

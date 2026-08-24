@@ -10,6 +10,33 @@ export type BookingStatus =
   | "suggested";
 export type BookingMode = "meridian" | "external" | "hybrid";
 export type TemplateStatus = "draft" | "active" | "retired";
+export type BusinessType =
+  | "barber"
+  | "hairdresser"
+  | "beauty_salon"
+  | "tattoo_studio"
+  | "nail_salon"
+  | "tanning_studio"
+  | "restaurant"
+  | "cafe"
+  | "pub"
+  | "other";
+export type DashboardMode = "appointments" | "hospitality";
+export type CapabilityKey =
+  | "booking_requests"
+  | "calendar"
+  | "services"
+  | "staff"
+  | "availability"
+  | "tables"
+  | "party_size"
+  | "allergies"
+  | "opening_hours"
+  | "kitchen_hours"
+  | "bar_hours"
+  | "external_booking_link"
+  | "email_notifications"
+  | "analytics";
 
 export type Json =
   | string
@@ -28,6 +55,8 @@ export type Database = {
           name: string;
           slug: string;
           status: BusinessStatus;
+          business_type: BusinessType | null;
+          dashboard_mode: DashboardMode;
           created_at: string;
           updated_at: string;
         };
@@ -36,6 +65,8 @@ export type Database = {
           name: string;
           slug: string;
           status?: BusinessStatus;
+          business_type?: BusinessType | null;
+          dashboard_mode?: DashboardMode;
           created_at?: string;
           updated_at?: string;
         };
@@ -44,10 +75,57 @@ export type Database = {
           name?: string;
           slug?: string;
           status?: BusinessStatus;
+          business_type?: BusinessType | null;
+          dashboard_mode?: DashboardMode;
           created_at?: string;
           updated_at?: string;
         };
         Relationships: [];
+      };
+      business_capabilities: {
+        Row: {
+          id: string;
+          business_id: string;
+          capability_key: CapabilityKey;
+          enabled: boolean;
+          updated_by: string | null;
+          updated_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          capability_key: CapabilityKey;
+          enabled?: boolean;
+          updated_by?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          capability_key?: CapabilityKey;
+          enabled?: boolean;
+          updated_by?: string | null;
+          updated_at?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_capabilities_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "business_capabilities_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       profiles: {
         Row: {
@@ -588,6 +666,9 @@ export type Database = {
       booking_status: BookingStatus;
       booking_mode: BookingMode;
       template_status: TemplateStatus;
+      business_type: BusinessType;
+      dashboard_mode: DashboardMode;
+      capability_key: CapabilityKey;
     };
     CompositeTypes: Record<string, never>;
   };

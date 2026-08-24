@@ -3,6 +3,7 @@
 ## Contents
 
 - [Hospitality dashboard baseline](./hospitality-dashboard-baseline.md) — audit and protection of the approved hospitality client dashboard before appointments mode
+- [Dashboard modes](./dashboard-modes.md) — business types, dashboard modes, and capability allowlists
 - [Operations runbook](./operations.md) — current phase, migrations, production env (Upstash / Turnstile / Resend), email retry, templates, onboarding, backups/retention
 - [Security review checklist](./security-review.md) — pre-merge security checks
 - [Architecture](./architecture.md) — tenant model and roles

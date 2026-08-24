@@ -98,3 +98,28 @@ describe("booking hardening migration", () => {
     expect(sql).toMatch(/email_delivery_logs_operation_key_uidx/);
   });
 });
+
+describe("dashboard modes migration", () => {
+  const sql = readMigrations();
+
+  it("adds business_type and dashboard_mode with hospitality default", () => {
+    expect(sql).toMatch(/create type public\.business_type as enum/i);
+    expect(sql).toMatch(/create type public\.dashboard_mode as enum/i);
+    expect(sql).toMatch(/add column if not exists dashboard_mode/i);
+    expect(sql).toMatch(/default 'hospitality'/);
+  });
+
+  it("creates business_capabilities with RLS and audit columns", () => {
+    expect(sql).toMatch(/create table public\.business_capabilities\b/i);
+    expect(sql).toMatch(/updated_by/);
+    expect(sql).toMatch(
+      /alter table public\.business_capabilities enable row level security/i,
+    );
+    expect(sql).toMatch(/business_capabilities_update_meridian_admin/);
+  });
+
+  it("blocks non-admin mode/type changes via trigger", () => {
+    expect(sql).toMatch(/prevent_non_admin_dashboard_mode_change/);
+    expect(sql).toMatch(/Only Meridian admins may change business type/);
+  });
+});

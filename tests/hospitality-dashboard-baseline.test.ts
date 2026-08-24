@@ -67,9 +67,10 @@ describe("hospitality dashboard baseline protection", () => {
     expect(shell).not.toContain('label: "Availability"');
   });
 
-  it("layout still marks the shell as Hospitality", () => {
+  it("layout resolves membership label from dashboard mode (defaults hospitality)", () => {
     const layout = readSrc("src/app/dashboard/layout.tsx");
-    expect(layout).toContain('membershipLabel="Hospitality"');
+    expect(layout).toContain("membershipLabelForMode");
+    expect(layout).toContain("resolveDashboardMode");
     expect(layout).toContain("opening_hours");
     expect(layout).toContain("todayOpeningLabel");
   });

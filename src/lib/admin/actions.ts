@@ -8,10 +8,21 @@ import { validateExternalBookingUrl } from "@/lib/booking/external-url";
 import type {
   BookingMode,
   BusinessStatus,
+  BusinessType,
+  DashboardMode,
   Json,
   MembershipRole,
   MembershipStatus,
 } from "@/types/database";
+import {
+  getDashboardModeForBusinessType,
+  isBusinessType,
+  isDashboardMode,
+} from "@/lib/business/modes";
+import {
+  resetCapabilitiesToModeDefaults,
+  seedDefaultCapabilities,
+} from "@/lib/business/capabilities-server";
 
 export type AdminActionState = {
   status: "idle" | "success" | "error";
@@ -62,6 +73,7 @@ export async function createBusiness(
   const slug = String(formData.get("slug") ?? "")
     .trim()
     .toLowerCase();
+  const businessTypeRaw = String(formData.get("businessType") ?? "").trim();
   const notificationEmail = String(
     formData.get("notificationEmail") ?? "",
   ).trim();
@@ -76,6 +88,14 @@ export async function createBusiness(
       message: "Slug must be lowercase letters, numbers, and hyphens.",
     };
   }
+  if (!isBusinessType(businessTypeRaw)) {
+    return {
+      status: "error",
+      message: "Select a business type.",
+    };
+  }
+  const businessType: BusinessType = businessTypeRaw;
+  const dashboardMode = getDashboardModeForBusinessType(businessType);
   if (!EMAIL_RE.test(notificationEmail)) {
     return { status: "error", message: "Enter a valid notification email." };
   }
@@ -86,7 +106,13 @@ export async function createBusiness(
   const supabase = await createClient();
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .insert({ name, slug, status: "active" })
+    .insert({
+      name,
+      slug,
+      status: "active",
+      business_type: businessType,
+      dashboard_mode: dashboardMode,
+    })
     .select("id")
     .single();
 
@@ -118,13 +144,27 @@ export async function createBusiness(
     };
   }
 
+  const seed = await seedDefaultCapabilities({
+    businessId: business.id,
+    mode: dashboardMode,
+    updatedBy: actor.user.id,
+  });
+  if (seed.error) {
+    return { status: "error", message: seed.error };
+  }
+
   await writeAudit({
     actorUserId: actor.user.id,
     businessId: business.id,
     action: "admin.business.create",
     entityType: "business",
     entityId: business.id,
-    metadata: { name, slug },
+    metadata: {
+      name,
+      slug,
+      business_type: businessType,
+      dashboard_mode: dashboardMode,
+    },
   });
 
   revalidatePath("/admin");
@@ -168,6 +208,92 @@ export async function updateBusinessStatus(
   revalidatePath("/admin");
   revalidatePath(`/admin/businesses/${businessId}`);
   return { status: "success", message: "Business status updated." };
+}
+
+export async function updateBusinessDashboardMode(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const businessTypeRaw = String(formData.get("businessType") ?? "").trim();
+  const modeRaw = String(formData.get("dashboardMode") ?? "").trim();
+  const resetCapabilities = formData.get("resetCapabilities") === "on";
+
+  if (!businessId) {
+    return { status: "error", message: "Missing business id." };
+  }
+  if (!isBusinessType(businessTypeRaw)) {
+    return { status: "error", message: "Select a valid business type." };
+  }
+  if (!isDashboardMode(modeRaw)) {
+    return { status: "error", message: "Select a valid dashboard mode." };
+  }
+
+  const businessType: BusinessType = businessTypeRaw;
+  const dashboardMode: DashboardMode = modeRaw;
+
+  const supabase = await createClient();
+  const { data: previous } = await supabase
+    .from("businesses")
+    .select("business_type, dashboard_mode")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      business_type: businessType,
+      dashboard_mode: dashboardMode,
+    })
+    .eq("id", businessId);
+
+  if (error) {
+    console.error("[admin] update dashboard mode", error);
+    return {
+      status: "error",
+      message: "Could not update business type or dashboard mode.",
+    };
+  }
+
+  if (resetCapabilities || previous?.dashboard_mode !== dashboardMode) {
+    const reset = await resetCapabilitiesToModeDefaults({
+      businessId,
+      mode: dashboardMode,
+      updatedBy: actor.user.id,
+    });
+    if (reset.error) {
+      return { status: "error", message: reset.error };
+    }
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.business.update_dashboard_mode",
+    entityType: "business",
+    entityId: businessId,
+    metadata: {
+      previous_business_type: previous?.business_type ?? null,
+      previous_dashboard_mode: previous?.dashboard_mode ?? null,
+      business_type: businessType,
+      dashboard_mode: dashboardMode,
+      reset_capabilities:
+        resetCapabilities || previous?.dashboard_mode !== dashboardMode,
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath("/dashboard");
+  return {
+    status: "success",
+    message: "Business type and dashboard mode updated.",
+  };
 }
 
 export async function addBusinessMembership(

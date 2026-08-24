@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getBusinessContext } from "@/lib/auth/business-context";
+import { hasCapability } from "@/lib/business/modes";
 import { validateExternalBookingUrl } from "@/lib/booking/external-url";
 import {
   customTablesFromForm,
@@ -12,7 +13,7 @@ import {
   parseOptionalPositiveInt,
   weeklyHoursFromForm,
 } from "@/lib/dashboard/hospitality-settings";
-import type { BookingMode, Json } from "@/types/database";
+import type { BookingMode, Database, Json } from "@/types/database";
 
 export type SettingsActionState = {
   status: "idle" | "success" | "error";
@@ -61,6 +62,12 @@ export async function updateBusinessSettings(
     };
   }
 
+  const canTables = hasCapability(context.capabilities, "tables");
+  const canPartySize = hasCapability(context.capabilities, "party_size");
+  const canOpeningHours = hasCapability(context.capabilities, "opening_hours");
+  const canKitchen = hasCapability(context.capabilities, "kitchen_hours");
+  const canBar = hasCapability(context.capabilities, "bar_hours");
+
   if (name.length < 2 || name.length > 120) {
     return { status: "error", message: "Enter a valid business name." };
   }
@@ -107,9 +114,10 @@ export async function updateBusinessSettings(
   }
 
   if (
-    Number.isNaN(tables2Seat) ||
-    Number.isNaN(tables4Seat) ||
-    Number.isNaN(tables6Seat)
+    canTables &&
+    (Number.isNaN(tables2Seat) ||
+      Number.isNaN(tables4Seat) ||
+      Number.isNaN(tables6Seat))
   ) {
     return {
       status: "error",
@@ -124,7 +132,7 @@ export async function updateBusinessSettings(
     };
   }
 
-  if (Number.isNaN(maxPartySize)) {
+  if (canPartySize && Number.isNaN(maxPartySize)) {
     return {
       status: "error",
       message: "Max party size must be a whole number of 1 or more.",
@@ -138,24 +146,27 @@ export async function updateBusinessSettings(
     };
   }
 
-  const customTables = customTablesFromForm(formData);
-  if (!customTables) {
+  const customTables = canTables ? customTablesFromForm(formData) : [];
+  if (canTables && !customTables) {
     return {
       status: "error",
       message: "Custom tables need a name and seats between 1 and 100.",
     };
   }
 
-  const openingHours = weeklyHoursFromForm(formData, "opening");
-  if (!openingHours) {
+  const openingHours = canOpeningHours
+    ? weeklyHoursFromForm(formData, "opening")
+    : null;
+  if (canOpeningHours && !openingHours) {
     return {
       status: "error",
       message: "Check opening times — each open day needs a valid open before close.",
     };
   }
 
-  const kitchenCloseEnabled = formData.get("kitchenCloseEnabled") === "on";
-  const barHoursEnabled = formData.get("barHoursEnabled") === "on";
+  const kitchenCloseEnabled =
+    canKitchen && formData.get("kitchenCloseEnabled") === "on";
+  const barHoursEnabled = canBar && formData.get("barHoursEnabled") === "on";
 
   let kitchenCloseTimes: ReturnType<typeof kitchenCloseFromForm> = {};
   if (kitchenCloseEnabled) {
@@ -200,28 +211,44 @@ export async function updateBusinessSettings(
     return { status: "error", message: "Could not update business name." };
   }
 
-  const { error: settingsError } = await supabase
-    .from("booking_settings")
-    .update({
+  const settingsPatch: Database["public"]["Tables"]["booking_settings"]["Update"] =
+    {
       notification_email: notificationEmail,
       contact_phone: contactPhone || null,
       timezone,
       booking_mode: bookingMode,
       external_booking_url: safeExternalUrl,
-      tables_2_seat: tables2Seat,
-      tables_4_seat: tables4Seat,
-      tables_6_seat: tables6Seat,
-      custom_tables: customTables as unknown as Json,
-      opening_hours: openingHours as unknown as Json,
-      kitchen_close_enabled: kitchenCloseEnabled,
-      kitchen_close_times: (kitchenCloseTimes ?? {}) as unknown as Json,
-      bar_hours_enabled: barHoursEnabled,
-      bar_opening_hours: (barOpeningHours ?? {}) as unknown as Json,
       holidays: holidays as unknown as Json,
       max_bookings_per_day: maxBookingsPerDay,
-      max_party_size: maxPartySize,
       booking_slot_minutes: bookingSlotMinutes,
-    })
+    };
+
+  if (canTables) {
+    settingsPatch.tables_2_seat = tables2Seat;
+    settingsPatch.tables_4_seat = tables4Seat;
+    settingsPatch.tables_6_seat = tables6Seat;
+    settingsPatch.custom_tables = customTables as unknown as Json;
+  }
+  if (canPartySize) {
+    settingsPatch.max_party_size = maxPartySize;
+  }
+  if (canOpeningHours && openingHours) {
+    settingsPatch.opening_hours = openingHours as unknown as Json;
+  }
+  if (canKitchen) {
+    settingsPatch.kitchen_close_enabled = kitchenCloseEnabled;
+    settingsPatch.kitchen_close_times = (kitchenCloseTimes ??
+      {}) as unknown as Json;
+  }
+  if (canBar) {
+    settingsPatch.bar_hours_enabled = barHoursEnabled;
+    settingsPatch.bar_opening_hours = (barOpeningHours ??
+      {}) as unknown as Json;
+  }
+
+  const { error: settingsError } = await supabase
+    .from("booking_settings")
+    .update(settingsPatch)
     .eq("business_id", businessId);
 
   if (settingsError) {

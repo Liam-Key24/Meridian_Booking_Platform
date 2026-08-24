@@ -6,6 +6,7 @@ import {
   addBusinessMembership,
   createBusiness,
   updateAdminBookingSettings,
+  updateBusinessDashboardMode,
   updateBusinessMembership,
   updateBusinessStatus,
   upsertAdminService,
@@ -15,7 +16,13 @@ import {
   assignBusinessTemplate,
   type TemplateAssignState,
 } from "@/lib/templates/actions";
-import type { BookingMode } from "@/types/database";
+import {
+  BUSINESS_TYPES,
+  BUSINESS_TYPE_LABELS,
+  DASHBOARD_MODES,
+  DASHBOARD_MODE_LABELS,
+} from "@/lib/business/modes";
+import type { BookingMode, BusinessType, DashboardMode } from "@/types/database";
 
 const initialState: AdminActionState = { status: "idle", message: null };
 
@@ -46,6 +53,16 @@ export function CreateBusinessForm() {
         hint="Used in /book/[slug]"
         required
         pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+      />
+      <Select
+        label="Business type"
+        name="businessType"
+        required
+        defaultValue="restaurant"
+        options={BUSINESS_TYPES.map((value) => ({
+          value,
+          label: BUSINESS_TYPE_LABELS[value],
+        }))}
       />
       <Input
         label="Notification email"
@@ -97,6 +114,53 @@ export function BusinessStatusForm({
       <div className="w-full">
         <Feedback state={state} />
       </div>
+    </form>
+  );
+}
+
+export function BusinessDashboardModeForm({
+  businessId,
+  businessType,
+  dashboardMode,
+}: {
+  businessId: string;
+  businessType: BusinessType | null;
+  dashboardMode: DashboardMode;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessDashboardMode,
+    initialState,
+  );
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="businessId" value={businessId} />
+      <Select
+        label="Business type"
+        name="businessType"
+        defaultValue={businessType ?? "other"}
+        options={BUSINESS_TYPES.map((value) => ({
+          value,
+          label: BUSINESS_TYPE_LABELS[value],
+        }))}
+      />
+      <Select
+        label="Dashboard mode"
+        name="dashboardMode"
+        defaultValue={dashboardMode}
+        hint="Effective mode is enforced server-side. Changing mode resets capabilities to mode defaults."
+        options={DASHBOARD_MODES.map((value) => ({
+          value,
+          label: DASHBOARD_MODE_LABELS[value],
+        }))}
+      />
+      <label className="flex items-center gap-2 text-sm text-meridian-text">
+        <input type="checkbox" name="resetCapabilities" className="size-4" />
+        Force reset capabilities to mode defaults
+      </label>
+      <Feedback state={state} />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Update type and mode"}
+      </Button>
     </form>
   );
 }
