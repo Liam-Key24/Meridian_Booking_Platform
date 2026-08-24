@@ -22,6 +22,8 @@ import {
   resolveWeekRange,
 } from "@/lib/dashboard/analytics-math";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
+import { chartBookingNoun } from "@/lib/business/capabilities";
+import type { DashboardMode } from "@/types/database";
 
 type PageProps = {
   searchParams: Promise<{ week?: string; period?: string }>;
@@ -61,6 +63,19 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
 
   const weekLabel = formatWeekLabel(week.from, week.to);
   const rangeLabel = weekLabel;
+  const mode =
+    (context.business.dashboard_mode as DashboardMode | undefined) ??
+    "hospitality";
+  const nouns = chartBookingNoun(mode);
+  const yAxisLabel = mode === "hospitality" ? "Tables" : "Bookings";
+  const requestsTitle =
+    mode === "hospitality"
+      ? "Table requests by day"
+      : "Booking requests by day";
+  const recentTitle =
+    mode === "hospitality"
+      ? "Recent table requests"
+      : "Recent booking requests";
 
   return (
     <main className="flex flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8 lg:py-10">
@@ -144,12 +159,13 @@ export default async function DashboardHomePage({ searchParams }: PageProps) {
           rangeLabel={metrics.requestsPeriodLabel}
           period={metrics.requestsPeriod}
           week={week.from}
-          yAxisLabel="Tables"
+          title={requestsTitle}
+          yAxisLabel={yAxisLabel}
         />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card title="Recent booking requests" description="Newest pending items">
+        <Card title={recentTitle} description={`Newest pending ${nouns.requestPlural}`}>
           {metrics.recentPending.length === 0 ? (
             <EmptyState
               title="No pending requests"

@@ -98,3 +98,40 @@ describe("booking hardening migration", () => {
     expect(sql).toMatch(/email_delivery_logs_operation_key_uidx/);
   });
 });
+
+describe("Business modes and capabilities", () => {
+  const sql = readMigrations();
+
+  it("adds business_type and dashboard_mode to businesses", () => {
+    expect(sql).toMatch(/create type public\.business_type as enum/i);
+    expect(sql).toMatch(/create type public\.dashboard_mode as enum/i);
+    expect(sql).toMatch(/add column business_type public\.business_type/i);
+    expect(sql).toMatch(/add column dashboard_mode public\.dashboard_mode/i);
+  });
+
+  it("creates capability and future stub tables with RLS", () => {
+    for (const table of [
+      "business_capabilities",
+      "business_staff",
+      "restaurant_tables",
+      "business_subscriptions",
+    ]) {
+      expect(sql).toMatch(new RegExp(`create table public\\.${table}\\b`, "i"));
+      expect(sql).toMatch(
+        new RegExp(
+          `alter table public\\.${table} enable row level security`,
+          "i",
+        ),
+      );
+    }
+  });
+
+  it("restricts capability writes to meridian_admin", () => {
+    expect(sql).toMatch(/business_capabilities_insert_admin/);
+    expect(sql).toMatch(/business_capabilities_update_admin/);
+  });
+
+  it("keeps Stripe IDs off businesses", () => {
+    expect(sql).not.toMatch(/alter table public\.businesses[\s\S]*stripe_/i);
+  });
+});

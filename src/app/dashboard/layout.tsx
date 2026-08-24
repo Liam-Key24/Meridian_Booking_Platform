@@ -1,11 +1,13 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
+import { membershipLabelForMode } from "@/lib/business/capabilities";
 import {
   defaultWeeklyHours,
   parseWeeklyHours,
   todayOpeningLabel,
 } from "@/lib/dashboard/hospitality-settings";
 import { createClient } from "@/lib/supabase/server";
+import type { DashboardMode } from "@/types/database";
 import { redirect } from "next/navigation";
 
 export default async function DashboardLayout({
@@ -22,6 +24,8 @@ export default async function DashboardLayout({
   const business = membership?.business;
   const businessName = business?.name ?? "Meridian";
   const role = membership?.membership.role ?? "staff";
+  const dashboardMode =
+    (business?.dashboard_mode as DashboardMode | undefined) ?? "hospitality";
 
   let notificationEmail: string | null = null;
   let contactPhone: string | null = null;
@@ -59,7 +63,7 @@ export default async function DashboardLayout({
       notificationEmail={notificationEmail}
       contactPhone={contactPhone}
       openingLabel={openingLabel}
-      membershipLabel="Hospitality"
+      membershipLabel={membershipLabelForMode(dashboardMode)}
       publicBookHref={publicBookHref}
       accountName={accountName}
       accountTitle={role === "owner" ? "Business owner" : "Staff"}

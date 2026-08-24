@@ -15,6 +15,7 @@ import {
 } from "@/lib/dashboard/hospitality-settings";
 import { createClient } from "@/lib/supabase/server";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
+import type { DashboardMode } from "@/types/database";
 
 export default async function DashboardSettingsPage() {
   const context = await requireDashboardContext();
@@ -30,6 +31,11 @@ export default async function DashboardSettingsPage() {
     );
   }
 
+  const mode =
+    (context.business.dashboard_mode as DashboardMode | undefined) ??
+    "hospitality";
+  const isHospitality = mode === "hospitality";
+
   const supabase = await createClient();
   const { data: settings, error } = await supabase
     .from("booking_settings")
@@ -44,8 +50,9 @@ export default async function DashboardSettingsPage() {
           Business settings
         </h1>
         <p className="max-w-2xl text-meridian-text-muted">
-          Contact details, table plan, service hours, and booking limits for{" "}
-          {context.business.name}.
+          {isHospitality
+            ? `Contact details, table plan, service hours, and booking limits for ${context.business.name}.`
+            : `Contact details, hours, and booking limits for ${context.business.name}.`}
         </p>
       </header>
 

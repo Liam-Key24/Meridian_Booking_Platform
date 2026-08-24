@@ -5,6 +5,17 @@ import { redirect } from "next/navigation";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
 import { validateExternalBookingUrl } from "@/lib/booking/external-url";
+import {
+  CAPABILITY_KEYS,
+  defaultDashboardModeForType,
+  isBusinessType,
+  isDashboardMode,
+  type CapabilityKey,
+} from "@/lib/business/capabilities";
+import {
+  getCapabilityDisableWarnings,
+  seedDefaultCapabilities,
+} from "@/lib/business/capabilities-server";
 import type {
   BookingMode,
   BusinessStatus,
@@ -66,6 +77,12 @@ export async function createBusiness(
     formData.get("notificationEmail") ?? "",
   ).trim();
   const timezone = String(formData.get("timezone") ?? "Europe/London").trim();
+  const businessTypeRaw = String(formData.get("businessType") ?? "restaurant");
+  if (!isBusinessType(businessTypeRaw)) {
+    return { status: "error", message: "Choose a valid business type." };
+  }
+  const businessType = businessTypeRaw;
+  const dashboardMode = defaultDashboardModeForType(businessType);
 
   if (name.length < 2 || name.length > 120) {
     return { status: "error", message: "Enter a valid business name." };
@@ -86,7 +103,13 @@ export async function createBusiness(
   const supabase = await createClient();
   const { data: business, error: businessError } = await supabase
     .from("businesses")
-    .insert({ name, slug, status: "active" })
+    .insert({
+      name,
+      slug,
+      status: "active",
+      business_type: businessType,
+      dashboard_mode: dashboardMode,
+    })
     .select("id")
     .single();
 
@@ -118,17 +141,123 @@ export async function createBusiness(
     };
   }
 
+  await seedDefaultCapabilities(business.id, businessType);
+
   await writeAudit({
     actorUserId: actor.user.id,
     businessId: business.id,
     action: "admin.business.create",
     entityType: "business",
     entityId: business.id,
-    metadata: { name, slug },
+    metadata: { name, slug, businessType, dashboardMode },
   });
 
   revalidatePath("/admin");
   redirect(`/admin/businesses/${business.id}`);
+}
+
+export async function updateBusinessModeAndCapabilities(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  if (!businessId) {
+    return { status: "error", message: "Missing business id." };
+  }
+
+  const businessTypeRaw = String(formData.get("businessType") ?? "");
+  const dashboardModeRaw = String(formData.get("dashboardMode") ?? "");
+  if (!isBusinessType(businessTypeRaw) || !isDashboardMode(dashboardModeRaw)) {
+    return { status: "error", message: "Invalid business type or mode." };
+  }
+
+  const confirmDisable = formData.get("confirmDisable") === "on";
+  const enabledKeys = new Set<CapabilityKey>();
+  for (const key of CAPABILITY_KEYS) {
+    if (formData.get(`capability_${key}`) === "on") {
+      enabledKeys.add(key);
+    }
+  }
+
+  const supabase = await createClient();
+  const { data: existingCaps } = await supabase
+    .from("business_capabilities")
+    .select("capability, enabled")
+    .eq("business_id", businessId);
+
+  const previouslyEnabled = new Set(
+    (existingCaps ?? [])
+      .filter((row) => row.enabled)
+      .map((row) => row.capability as CapabilityKey),
+  );
+  const disabling = CAPABILITY_KEYS.filter(
+    (key) => previouslyEnabled.has(key) && !enabledKeys.has(key),
+  );
+
+  const warnings = await getCapabilityDisableWarnings(businessId, disabling);
+  if (warnings.length > 0 && !confirmDisable) {
+    return {
+      status: "error",
+      message: `Confirm disable: ${warnings.map((w) => w.warning).join(" ")}`,
+    };
+  }
+
+  const { error: businessError } = await supabase
+    .from("businesses")
+    .update({
+      business_type: businessTypeRaw,
+      dashboard_mode: dashboardModeRaw,
+    })
+    .eq("id", businessId);
+
+  if (businessError) {
+    return { status: "error", message: "Could not update business mode." };
+  }
+
+  const rows = CAPABILITY_KEYS.map((capability) => ({
+    business_id: businessId,
+    capability,
+    enabled: enabledKeys.has(capability),
+  }));
+
+  const { error: capsError } = await supabase
+    .from("business_capabilities")
+    .upsert(rows, { onConflict: "business_id,capability" });
+
+  if (capsError) {
+    return { status: "error", message: "Could not update capabilities." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.business.update_capabilities",
+    entityType: "business",
+    entityId: businessId,
+    metadata: {
+      businessType: businessTypeRaw,
+      dashboardMode: dashboardModeRaw,
+      enabled: [...enabledKeys],
+      disabled: disabling,
+      warnings: warnings.map((w) => w.capability),
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath("/dashboard");
+  return {
+    status: "success",
+    message:
+      warnings.length > 0
+        ? "Mode and capabilities updated. Existing records were preserved."
+        : "Mode and capabilities updated.",
+  };
 }
 
 export async function updateBusinessStatus(

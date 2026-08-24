@@ -7,6 +7,7 @@ import {
   createBusiness,
   updateAdminBookingSettings,
   updateBusinessMembership,
+  updateBusinessModeAndCapabilities,
   updateBusinessStatus,
   upsertAdminService,
   type AdminActionState,
@@ -15,7 +16,14 @@ import {
   assignBusinessTemplate,
   type TemplateAssignState,
 } from "@/lib/templates/actions";
-import type { BookingMode } from "@/types/database";
+import {
+  BUSINESS_TYPES,
+  CAPABILITY_KEYS,
+  CAPABILITY_LABELS,
+  DASHBOARD_MODES,
+  type CapabilityKey,
+} from "@/lib/business/capabilities";
+import type { BookingMode, BusinessType, DashboardMode } from "@/types/database";
 
 const initialState: AdminActionState = { status: "idle", message: null };
 
@@ -47,6 +55,15 @@ export function CreateBusinessForm() {
         required
         pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
       />
+      <Select
+        label="Business type"
+        name="businessType"
+        defaultValue="restaurant"
+        options={BUSINESS_TYPES.map((type) => ({
+          value: type,
+          label: type.charAt(0).toUpperCase() + type.slice(1),
+        }))}
+      />
       <Input
         label="Notification email"
         name="notificationEmail"
@@ -62,6 +79,81 @@ export function CreateBusinessForm() {
       <Feedback state={state} />
       <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create business"}
+      </Button>
+    </form>
+  );
+}
+
+export function BusinessModeCapabilitiesForm({
+  businessId,
+  businessType,
+  dashboardMode,
+  capabilities,
+}: {
+  businessId: string;
+  businessType: BusinessType;
+  dashboardMode: DashboardMode;
+  capabilities: Record<CapabilityKey, boolean>;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessModeAndCapabilities,
+    initialState,
+  );
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="businessId" value={businessId} />
+      <Select
+        label="Business type"
+        name="businessType"
+        defaultValue={businessType}
+        options={BUSINESS_TYPES.map((type) => ({
+          value: type,
+          label: type.charAt(0).toUpperCase() + type.slice(1),
+        }))}
+      />
+      <Select
+        label="Dashboard mode"
+        name="dashboardMode"
+        defaultValue={dashboardMode}
+        options={DASHBOARD_MODES.map((mode) => ({
+          value: mode,
+          label: mode === "hospitality" ? "Hospitality" : "Appointments",
+        }))}
+      />
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-meridian-text">
+          Capabilities (admin only)
+        </legend>
+        <p className="text-xs text-meridian-text-muted">
+          Business owners cannot grant themselves capabilities. Disabling a
+          capability hides UI but does not delete existing records.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {CAPABILITY_KEYS.map((key) => (
+            <label
+              key={key}
+              className="flex items-center gap-2 text-sm text-meridian-text"
+            >
+              <input
+                type="checkbox"
+                name={`capability_${key}`}
+                defaultChecked={capabilities[key]}
+              />
+              {CAPABILITY_LABELS[key]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label className="flex items-start gap-2 text-sm text-meridian-text">
+        <input type="checkbox" name="confirmDisable" className="mt-1" />
+        <span>
+          I confirm disabling capabilities that already have records (data is
+          preserved).
+        </span>
+      </label>
+      <Feedback state={state} />
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save mode & capabilities"}
       </Button>
     </form>
   );
