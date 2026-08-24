@@ -7,7 +7,8 @@ export type BookingStatus =
   | "confirmed"
   | "declined"
   | "cancelled"
-  | "suggested";
+  | "suggested"
+  | "no_show";
 export type BookingMode = "meridian" | "external" | "hybrid";
 export type TemplateStatus = "draft" | "active" | "retired";
 export type BusinessType =
@@ -338,6 +339,7 @@ export type Database = {
           allergies: string[];
           notes: string | null;
           status: BookingStatus;
+          assigned_staff_user_id: string | null;
           suggested_date: string | null;
           suggested_time: string | null;
           privacy_consent_at: string | null;
@@ -360,6 +362,7 @@ export type Database = {
           allergies?: string[];
           notes?: string | null;
           status?: BookingStatus;
+          assigned_staff_user_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
@@ -382,6 +385,7 @@ export type Database = {
           allergies?: string[];
           notes?: string | null;
           status?: BookingStatus;
+          assigned_staff_user_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;

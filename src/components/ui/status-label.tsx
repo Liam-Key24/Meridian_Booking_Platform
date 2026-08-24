@@ -35,6 +35,11 @@ const statusConfig: Record<
     className:
       "bg-meridian-status-suggested-bg text-meridian-status-suggested",
   },
+  no_show: {
+    label: "No-show",
+    className:
+      "bg-meridian-surface-muted text-meridian-text-muted",
+  },
 };
 
 export function StatusLabel({

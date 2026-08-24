@@ -20,6 +20,7 @@ export function emptyStatusCounts(): StatusCounts {
     declined: 0,
     cancelled: 0,
     suggested: 0,
+    no_show: 0,
   };
 }
 

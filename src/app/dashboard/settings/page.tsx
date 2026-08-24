@@ -3,6 +3,7 @@ import {
   EmptyState,
   ErrorState,
 } from "@/components/ui";
+import { AppointmentsSettingsPanel } from "@/components/dashboard/appointments/appointments-settings-panel";
 import { BusinessSettingsForm } from "@/components/dashboard/business-settings-form";
 import {
   defaultBarHours,
@@ -37,30 +38,44 @@ export default async function DashboardSettingsPage() {
     .eq("business_id", context.business.id)
     .maybeSingle();
 
+  const isAppointments = context.dashboardMode === "appointments";
+
   return (
     <main className="flex w-full flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10 lg:pl-12">
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
-          Business settings
+          {isAppointments ? "Appointment settings" : "Business settings"}
         </h1>
         <p className="max-w-2xl text-meridian-text-muted">
-          Contact details, table plan, service hours, and booking limits for{" "}
-          {context.business.name}.
+          {isAppointments
+            ? `Contact details, booking mode, and availability for ${context.business.name}.`
+            : `Contact details, table plan, service hours, and booking limits for ${context.business.name}.`}
         </p>
       </header>
 
-      <Card>
-        {error ? (
-          <ErrorState
-            title="Could not load settings"
-            description="Please try again."
-          />
-        ) : !settings ? (
+      {error ? (
+        <ErrorState
+          title="Could not load settings"
+          description="Please try again."
+        />
+      ) : !settings ? (
+        <Card>
           <EmptyState
             title="Settings not configured"
             description="Ask a Meridian admin to create booking settings for this business."
           />
-        ) : (
+        </Card>
+      ) : isAppointments ? (
+        <AppointmentsSettingsPanel
+          businessName={context.business.name}
+          notificationEmail={settings.notification_email}
+          contactPhone={settings.contact_phone}
+          timezone={settings.timezone}
+          bookingMode={settings.booking_mode}
+          externalBookingUrl={settings.external_booking_url}
+        />
+      ) : (
+        <Card>
           <BusinessSettingsForm
             businessId={context.business.id}
             name={context.business.name}
@@ -102,8 +117,8 @@ export default async function DashboardSettingsPage() {
             bookingSlotMinutes={settings.booking_slot_minutes ?? 15}
             canEdit={context.role === "owner" || context.isMeridianAdmin}
           />
-        )}
-      </Card>
+        </Card>
+      )}
     </main>
   );
 }

@@ -56,15 +56,18 @@ describe("hospitality dashboard baseline protection", () => {
   });
 
   it("keeps hospitality sidebar navigation labels", () => {
-    const shell = readSrc("src/components/dashboard/dashboard-shell.tsx");
-    expect(shell).toContain('label: "Dashboard"');
-    expect(shell).toContain('label: "Bookings"');
-    expect(shell).toContain('label: "Calendar"');
-    expect(shell).toContain('label: "New booking"');
-    expect(shell).toContain("ForkKnife");
-    expect(shell).not.toContain('label: "Staff"');
-    expect(shell).not.toContain('label: "Services"');
-    expect(shell).not.toContain('label: "Availability"');
+    const nav = readSrc("src/components/dashboard/shared/dashboard-nav.ts");
+    expect(nav).toContain('label: "Dashboard"');
+    expect(nav).toContain('label: "Bookings"');
+    expect(nav).toContain('label: "Calendar"');
+    expect(nav).toContain('label: "New booking"');
+    const hospitalityBlock = nav.slice(
+      nav.indexOf("HOSPITALITY_NAV"),
+      nav.indexOf("APPOINTMENTS_NAV"),
+    );
+    expect(hospitalityBlock).not.toContain('label: "Staff"');
+    expect(hospitalityBlock).not.toContain('label: "Services"');
+    expect(hospitalityBlock).not.toContain('label: "Availability"');
   });
 
   it("layout resolves membership label from dashboard mode (defaults hospitality)", () => {
@@ -120,8 +123,13 @@ describe("hospitality dashboard baseline protection", () => {
   });
 
   it("keeps hospitality analytics entry points and Tables chart label", () => {
-    const home = readSrc("src/app/dashboard/page.tsx");
-    expect(home).toContain("getDashboardMetrics");
+    const page = readSrc("src/app/dashboard/page.tsx");
+    expect(page).toContain("getDashboardMetrics");
+    expect(page).toContain("HospitalityDashboardHome");
+
+    const home = readSrc(
+      "src/components/dashboard/hospitality/hospitality-dashboard-home.tsx",
+    );
     expect(home).toContain('yAxisLabel="Tables"');
     expect(home).toContain("Pending requests");
     expect(home).toContain("Confirmed today");

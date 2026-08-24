@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { navForDashboardMode } from "@/components/dashboard/shared/dashboard-nav";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import {
   membershipLabelForMode,
@@ -70,6 +71,8 @@ export default async function DashboardLayout({
       publicBookHref={publicBookHref}
       accountName={accountName}
       accountTitle={role === "owner" ? "Business owner" : "Staff"}
+      dashboardMode={dashboardMode}
+      navItems={navForDashboardMode(dashboardMode)}
     >
       {children}
     </DashboardShell>
