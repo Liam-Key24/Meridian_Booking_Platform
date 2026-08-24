@@ -9,6 +9,7 @@ import {
   sendBookingSuggestedEmail,
 } from "@/lib/booking/decision-emails";
 import { getBusinessContext } from "@/lib/auth/business-context";
+import { hasCapability } from "@/lib/business/modes";
 import { normalizeAllergies } from "@/lib/allergies";
 import { createClient } from "@/lib/supabase/server";
 import type { Json, Tables } from "@/types/database";
@@ -132,6 +133,13 @@ export async function approveBooking(
   const { error: authError, context } = await requireMemberContext(businessId);
   if (authError || !context) {
     return { status: "error", message: authError ?? "Not authorised." };
+  }
+
+  if (!hasCapability(context.capabilities, "booking_requests")) {
+    return {
+      status: "error",
+      message: "Booking requests are disabled for this business.",
+    };
   }
 
   const loaded = await loadBookingBundle(businessId, bookingId);
@@ -473,6 +481,13 @@ export async function updateBookingDetails(
     return { status: "error", message: authError ?? "Not authorised." };
   }
 
+  if (!hasCapability(context.capabilities, "booking_requests")) {
+    return {
+      status: "error",
+      message: "Booking requests are disabled for this business.",
+    };
+  }
+
   const loaded = await loadBookingBundle(businessId, bookingId);
   if (loaded.error || !loaded.booking) {
     return { status: "error", message: loaded.error ?? "Booking not found." };
@@ -487,20 +502,43 @@ export async function updateBookingDetails(
     return { status: "error", message: "Guest count must be at least 1." };
   }
 
+  if (
+    allergies.length > 0 &&
+    !hasCapability(context.capabilities, "allergies")
+  ) {
+    return {
+      status: "error",
+      message: "Allergy notes are disabled for this business.",
+    };
+  }
+
+  const canParty = hasCapability(context.capabilities, "party_size");
+  const canTables = hasCapability(context.capabilities, "tables");
+  const canAllergies = hasCapability(context.capabilities, "allergies");
+
   const normalisedTime =
     preferredTime.length === 5 ? `${preferredTime}:00` : preferredTime;
+
+  const updatePatch: {
+    preferred_date: string;
+    preferred_time: string;
+    notes: string | null;
+    guest_count?: number | null;
+    assigned_table?: string | null;
+    allergies?: string[];
+  } = {
+    preferred_date: preferredDate,
+    preferred_time: normalisedTime,
+    notes,
+  };
+  if (canParty) updatePatch.guest_count = guestCount;
+  if (canTables) updatePatch.assigned_table = assignedTable;
+  if (canAllergies) updatePatch.allergies = allergies;
 
   const supabase = await createClient();
   const { data: updated, error: updateError } = await supabase
     .from("bookings")
-    .update({
-      preferred_date: preferredDate,
-      preferred_time: normalisedTime,
-      guest_count: guestCount,
-      assigned_table: assignedTable,
-      notes,
-      allergies,
-    })
+    .update(updatePatch)
     .eq("id", bookingId)
     .eq("business_id", businessId)
     .select("id")
@@ -556,6 +594,23 @@ export async function createManualBooking(
   const { error: authError, context } = await requireMemberContext(businessId);
   if (authError || !context) {
     return { status: "error", message: authError ?? "Not authorised." };
+  }
+
+  if (!hasCapability(context.capabilities, "booking_requests")) {
+    return {
+      status: "error",
+      message: "Booking requests are disabled for this business.",
+    };
+  }
+
+  if (
+    allergies.length > 0 &&
+    !hasCapability(context.capabilities, "allergies")
+  ) {
+    return {
+      status: "error",
+      message: "Allergy notes are disabled for this business.",
+    };
   }
 
   if (customerName.length < 2) {

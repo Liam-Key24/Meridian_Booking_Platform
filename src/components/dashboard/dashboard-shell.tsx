@@ -21,6 +21,10 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { signOut } from "@/lib/auth/actions";
+import {
+  switchActiveBusiness,
+  type SwitchBusinessState,
+} from "@/lib/auth/switch-business";
 import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import {
   HOSPITALITY_NAV,
@@ -30,6 +34,7 @@ import {
 } from "@/components/dashboard/shared/dashboard-nav";
 import type { DashboardMode } from "@/lib/business/modes";
 import { cn } from "@/lib/cn";
+import { useActionState } from "react";
 
 export type DashboardShellProps = {
   businessName: string;
@@ -43,6 +48,9 @@ export type DashboardShellProps = {
   /** Server-resolved mode. Defaults to hospitality so existing UX is unchanged. */
   dashboardMode?: DashboardMode;
   navItems?: DashboardNavDef[];
+  /** Memberships available for switching (server-verified list). */
+  businesses?: Array<{ id: string; name: string }>;
+  activeBusinessId?: string | null;
   children: React.ReactNode;
 };
 
@@ -83,6 +91,8 @@ export function DashboardShell({
   accountTitle,
   dashboardMode = "hospitality",
   navItems,
+  businesses = [],
+  activeBusinessId = null,
   children,
 }: DashboardShellProps) {
   const pathname = usePathname();
@@ -90,6 +100,11 @@ export function DashboardShell({
   const titleId = useId();
   const nav = navItems ?? HOSPITALITY_NAV;
   const isAppointments = dashboardMode === "appointments";
+  const switchInitial: SwitchBusinessState = { status: "idle", message: null };
+  const [switchState, switchAction, switchPending] = useActionState(
+    switchActiveBusiness,
+    switchInitial,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -134,6 +149,34 @@ export function DashboardShell({
               {membershipLabel}
             </span>
           </div>
+
+          {businesses.length > 1 ? (
+            <form action={switchAction} className="space-y-1.5">
+              <label className="block text-[11px] font-semibold tracking-wide text-meridian-text-muted uppercase">
+                Active business
+                <select
+                  name="businessId"
+                  defaultValue={activeBusinessId ?? businesses[0]?.id}
+                  className="mt-1 h-9 w-full cursor-pointer rounded-meridian-sm border border-meridian-border bg-meridian-surface px-2 text-xs font-medium text-meridian-text"
+                  onChange={(event) => {
+                    event.currentTarget.form?.requestSubmit();
+                  }}
+                  disabled={switchPending}
+                >
+                  {businesses.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {switchState.status === "error" && switchState.message ? (
+                <p className="text-xs text-meridian-status-declined" role="alert">
+                  {switchState.message}
+                </p>
+              ) : null}
+            </form>
+          ) : null}
 
           <dl className="space-y-2 text-xs text-meridian-text-muted">
             <div className="flex items-start gap-2">

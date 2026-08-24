@@ -1,10 +1,13 @@
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { navForDashboardMode } from "@/components/dashboard/shared/dashboard-nav";
-import { getAuthSnapshot } from "@/lib/auth/business-context";
 import {
-  membershipLabelForMode,
-  resolveDashboardMode,
-} from "@/lib/business/modes";
+  filterNavByCapabilities,
+  navForDashboardMode,
+} from "@/components/dashboard/shared/dashboard-nav";
+import {
+  getAuthSnapshot,
+  getBusinessContext,
+} from "@/lib/auth/business-context";
+import { membershipLabelForMode } from "@/lib/business/modes";
 import {
   defaultWeeklyHours,
   parseWeeklyHours,
@@ -23,13 +26,13 @@ export default async function DashboardLayout({
     redirect("/login?next=/dashboard");
   }
 
-  const membership = snapshot.memberships[0];
-  const business = membership?.business;
+  // Active business from verified cookie / membership — never from mode query.
+  const context = await getBusinessContext();
+  const business = context?.business;
   const businessName = business?.name ?? "Meridian";
-  const role = membership?.membership.role ?? "staff";
-  const dashboardMode = business
-    ? resolveDashboardMode(business)
-    : "hospitality";
+  const role = context?.role ?? "staff";
+  const dashboardMode = context?.dashboardMode ?? "hospitality";
+  const capabilities = context?.capabilities;
 
   let notificationEmail: string | null = null;
   let contactPhone: string | null = null;
@@ -61,6 +64,16 @@ export default async function DashboardLayout({
     snapshot.user.email?.split("@")[0] ||
     "Account";
 
+  const businesses = snapshot.memberships.map((item) => ({
+    id: item.business.id,
+    name: item.business.name,
+  }));
+
+  const navItems = filterNavByCapabilities(
+    navForDashboardMode(dashboardMode),
+    capabilities,
+  );
+
   return (
     <DashboardShell
       businessName={businessName}
@@ -72,7 +85,9 @@ export default async function DashboardLayout({
       accountName={accountName}
       accountTitle={role === "owner" ? "Business owner" : "Staff"}
       dashboardMode={dashboardMode}
-      navItems={navForDashboardMode(dashboardMode)}
+      navItems={navItems}
+      businesses={businesses}
+      activeBusinessId={business?.id ?? null}
     >
       {children}
     </DashboardShell>

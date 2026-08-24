@@ -74,6 +74,7 @@ describe("appointments dashboard experience", () => {
   it("shell and home route resolve mode server-side", () => {
     const layout = readSrc("src/app/dashboard/layout.tsx");
     expect(layout).toContain("navForDashboardMode");
+    expect(layout).toContain("getBusinessContext()");
     expect(layout).toContain("dashboardMode={dashboardMode}");
 
     const page = readSrc("src/app/dashboard/page.tsx");

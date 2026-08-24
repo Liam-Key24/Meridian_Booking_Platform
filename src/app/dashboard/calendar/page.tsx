@@ -7,7 +7,7 @@ import {
   todayLocalIso,
 } from "@/lib/dashboard/calendar";
 import { listBookingsForBusiness } from "@/lib/dashboard/bookings";
-import { requireDashboardContext } from "@/lib/dashboard/require-context";
+import { requireDashboardCapability } from "@/lib/dashboard/require-context";
 
 type PageProps = {
   searchParams: Promise<{ view?: string; date?: string }>;
@@ -15,18 +15,7 @@ type PageProps = {
 
 export default async function DashboardCalendarPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const context = await requireDashboardContext();
-
-  if (!context) {
-    return (
-      <main className="flex flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-8">
-        <ErrorState
-          title="No business membership"
-          description="Your account is signed in but not linked to an active business."
-        />
-      </main>
-    );
-  }
+  const context = await requireDashboardCapability("calendar");
 
   const query = parseCalendarQuery(params);
   const range = calendarRange(query);

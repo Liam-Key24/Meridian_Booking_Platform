@@ -9,7 +9,7 @@ import { requireAppointmentsContext } from "@/lib/dashboard/require-appointments
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AvailabilityPage() {
-  const context = await requireAppointmentsContext();
+  const context = await requireAppointmentsContext("availability");
   const supabase = await createClient();
   const { data: settings, error } = await supabase
     .from("booking_settings")

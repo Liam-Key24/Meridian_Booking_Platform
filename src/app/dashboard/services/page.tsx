@@ -3,7 +3,7 @@ import { getAppointmentsDashboardMetrics } from "@/lib/dashboard/appointments-an
 import { requireAppointmentsContext } from "@/lib/dashboard/require-appointments";
 
 export default async function ServicesPage() {
-  const context = await requireAppointmentsContext();
+  const context = await requireAppointmentsContext("services");
   const { data, error } = await getAppointmentsDashboardMetrics(
     context.business.id,
   );

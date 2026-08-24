@@ -7,11 +7,23 @@ import { resolveWeekRange } from "@/lib/dashboard/analytics-math";
 import { requireDashboardContext } from "@/lib/dashboard/require-context";
 
 type PageProps = {
-  searchParams: Promise<{ week?: string; period?: string }>;
+  searchParams: Promise<{
+    week?: string;
+    period?: string;
+    /** Ignored — mode is never taken from the URL. */
+    mode?: string;
+    dashboard_mode?: string;
+    dashboardMode?: string;
+  }>;
 };
 
 export default async function DashboardHomePage({ searchParams }: PageProps) {
   const params = await searchParams;
+  // Explicitly discard any client mode hints so they cannot affect rendering.
+  void params.mode;
+  void params.dashboard_mode;
+  void params.dashboardMode;
+
   const context = await requireDashboardContext();
 
   if (!context) {
