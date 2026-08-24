@@ -1,14 +1,26 @@
 import Link from "next/link";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import {
+  BUSINESS_TYPE_LABELS,
+  DASHBOARD_MODE_LABELS,
+  SUBSCRIPTION_STATUS_LABELS,
+} from "@/lib/business/modes";
 import { createClient } from "@/lib/supabase/server";
+import type {
+  BusinessType,
+  DashboardMode,
+  SubscriptionStatus,
+} from "@/types/database";
 
 export default async function AdminBusinessesPage() {
   await requireMeridianAdmin();
   const supabase = await createClient();
   const { data: businesses, error } = await supabase
     .from("businesses")
-    .select("id, name, slug, status, created_at")
+    .select(
+      "id, name, slug, status, business_type, dashboard_mode, subscription_status, created_at",
+    )
     .order("name");
 
   return (
@@ -20,7 +32,8 @@ export default async function AdminBusinessesPage() {
             Businesses
           </h1>
           <p className="text-meridian-text-muted">
-            Platform-level tenant list. Access is gated by meridian_admin and RLS.
+            Platform-level tenant list. Access is gated by meridian_admin and
+            RLS.
           </p>
         </div>
         <Link
@@ -31,7 +44,10 @@ export default async function AdminBusinessesPage() {
         </Link>
       </header>
 
-      <Card title="All businesses" description={`${businesses?.length ?? 0} total`}>
+      <Card
+        title="All businesses"
+        description={`${businesses?.length ?? 0} total`}
+      >
         {error ? (
           <p className="text-sm text-meridian-status-declined">
             Could not load businesses.
@@ -43,27 +59,45 @@ export default async function AdminBusinessesPage() {
           />
         ) : (
           <ul className="divide-y divide-meridian-border">
-            {businesses.map((business) => (
-              <li
-                key={business.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <div>
-                  <Link
-                    href={`/admin/businesses/${business.id}`}
-                    className="font-semibold text-meridian-text hover:text-meridian-teal"
+            {businesses.map((business) => {
+              const mode =
+                (business.dashboard_mode as DashboardMode | undefined) ??
+                "hospitality";
+              const subscription =
+                (business.subscription_status as
+                  | SubscriptionStatus
+                  | undefined) ?? "none";
+              const typeLabel = business.business_type
+                ? (BUSINESS_TYPE_LABELS[
+                    business.business_type as BusinessType
+                  ] ?? business.business_type)
+                : "Unset type";
+              return (
+                <li
+                  key={business.id}
+                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                >
+                  <div>
+                    <Link
+                      href={`/admin/businesses/${business.id}`}
+                      className="font-semibold text-meridian-text hover:text-meridian-teal"
+                    >
+                      {business.name}
+                    </Link>
+                    <p className="text-sm text-meridian-text-muted">
+                      /book/{business.slug} · {typeLabel} ·{" "}
+                      {DASHBOARD_MODE_LABELS[mode]} ·{" "}
+                      {SUBSCRIPTION_STATUS_LABELS[subscription]}
+                    </p>
+                  </div>
+                  <Badge
+                    tone={business.status === "active" ? "teal" : "soft"}
                   >
-                    {business.name}
-                  </Link>
-                  <p className="text-sm text-meridian-text-muted">
-                    /book/{business.slug}
-                  </p>
-                </div>
-                <Badge tone={business.status === "active" ? "teal" : "soft"}>
-                  {business.status}
-                </Badge>
-              </li>
-            ))}
+                    {business.status}
+                  </Badge>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

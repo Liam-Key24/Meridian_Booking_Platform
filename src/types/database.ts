@@ -23,6 +23,12 @@ export type BusinessType =
   | "pub"
   | "other";
 export type DashboardMode = "appointments" | "hospitality";
+export type SubscriptionStatus =
+  | "trial"
+  | "active"
+  | "past_due"
+  | "cancelled"
+  | "none";
 export type CapabilityKey =
   | "booking_requests"
   | "calendar"
@@ -58,6 +64,7 @@ export type Database = {
           status: BusinessStatus;
           business_type: BusinessType | null;
           dashboard_mode: DashboardMode;
+          subscription_status: SubscriptionStatus;
           created_at: string;
           updated_at: string;
         };
@@ -68,6 +75,7 @@ export type Database = {
           status?: BusinessStatus;
           business_type?: BusinessType | null;
           dashboard_mode?: DashboardMode;
+          subscription_status?: SubscriptionStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -78,6 +86,7 @@ export type Database = {
           status?: BusinessStatus;
           business_type?: BusinessType | null;
           dashboard_mode?: DashboardMode;
+          subscription_status?: SubscriptionStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -673,6 +682,7 @@ export type Database = {
       business_type: BusinessType;
       dashboard_mode: DashboardMode;
       capability_key: CapabilityKey;
+      subscription_status: SubscriptionStatus;
     };
     CompositeTypes: Record<string, never>;
   };

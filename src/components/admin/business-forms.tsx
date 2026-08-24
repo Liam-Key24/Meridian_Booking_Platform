@@ -6,9 +6,11 @@ import {
   addBusinessMembership,
   createBusiness,
   updateAdminBookingSettings,
+  updateBusinessCapabilities,
   updateBusinessDashboardMode,
   updateBusinessMembership,
   updateBusinessStatus,
+  updateBusinessSubscription,
   upsertAdminService,
   type AdminActionState,
 } from "@/lib/admin/actions";
@@ -19,10 +21,20 @@ import {
 import {
   BUSINESS_TYPES,
   BUSINESS_TYPE_LABELS,
+  CAPABILITY_KEYS,
+  CAPABILITY_LABELS,
   DASHBOARD_MODES,
   DASHBOARD_MODE_LABELS,
+  SUBSCRIPTION_STATUSES,
+  SUBSCRIPTION_STATUS_LABELS,
+  type CapabilityMap,
 } from "@/lib/business/modes";
-import type { BookingMode, BusinessType, DashboardMode } from "@/types/database";
+import type {
+  BookingMode,
+  BusinessType,
+  DashboardMode,
+  SubscriptionStatus,
+} from "@/types/database";
 
 const initialState: AdminActionState = { status: "idle", message: null };
 
@@ -160,6 +172,77 @@ export function BusinessDashboardModeForm({
       <Feedback state={state} />
       <Button type="submit" variant="secondary" disabled={pending}>
         {pending ? "Saving…" : "Update type and mode"}
+      </Button>
+    </form>
+  );
+}
+
+export function BusinessSubscriptionForm({
+  businessId,
+  subscriptionStatus,
+}: {
+  businessId: string;
+  subscriptionStatus: SubscriptionStatus;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessSubscription,
+    initialState,
+  );
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-3">
+      <input type="hidden" name="businessId" value={businessId} />
+      <Select
+        label="Subscription status"
+        name="subscriptionStatus"
+        defaultValue={subscriptionStatus}
+        hint="Internal ops metadata only — not a payment integration."
+        options={SUBSCRIPTION_STATUSES.map((value) => ({
+          value,
+          label: SUBSCRIPTION_STATUS_LABELS[value],
+        }))}
+      />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Update subscription"}
+      </Button>
+      <div className="w-full">
+        <Feedback state={state} />
+      </div>
+    </form>
+  );
+}
+
+export function BusinessCapabilitiesForm({
+  businessId,
+  capabilities,
+}: {
+  businessId: string;
+  capabilities: CapabilityMap;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessCapabilities,
+    initialState,
+  );
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="businessId" value={businessId} />
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {CAPABILITY_KEYS.map((key) => (
+          <li key={key}>
+            <label className="flex items-center gap-2 text-sm text-meridian-text">
+              <input
+                type="checkbox"
+                name={`cap_${key}`}
+                defaultChecked={capabilities[key]}
+                className="size-4"
+              />
+              {CAPABILITY_LABELS[key]}
+            </label>
+          </li>
+        ))}
+      </ul>
+      <Feedback state={state} />
+      <Button type="submit" variant="secondary" disabled={pending}>
+        {pending ? "Saving…" : "Save capabilities"}
       </Button>
     </form>
   );

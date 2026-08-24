@@ -122,4 +122,12 @@ describe("dashboard modes migration", () => {
     expect(sql).toMatch(/prevent_non_admin_dashboard_mode_change/);
     expect(sql).toMatch(/Only Meridian admins may change business type/);
   });
+
+  it("adds subscription_status for admin ops without payments", () => {
+    expect(sql).toMatch(/create type public\.subscription_status as enum/i);
+    expect(sql).toMatch(/subscription_status public\.subscription_status/i);
+    expect(sql).toMatch(
+      /old\.subscription_status is distinct from new\.subscription_status/i,
+    );
+  });
 });

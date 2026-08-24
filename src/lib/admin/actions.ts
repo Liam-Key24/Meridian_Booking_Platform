@@ -13,11 +13,15 @@ import type {
   Json,
   MembershipRole,
   MembershipStatus,
+  SubscriptionStatus,
 } from "@/types/database";
 import {
+  CAPABILITY_KEYS,
   getDashboardModeForBusinessType,
   isBusinessType,
   isDashboardMode,
+  isSubscriptionStatus,
+  type CapabilityKey,
 } from "@/lib/business/modes";
 import {
   resetCapabilitiesToModeDefaults,
@@ -293,6 +297,124 @@ export async function updateBusinessDashboardMode(
   return {
     status: "success",
     message: "Business type and dashboard mode updated.",
+  };
+}
+
+export async function updateBusinessSubscription(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const statusRaw = String(formData.get("subscriptionStatus") ?? "").trim();
+
+  if (!businessId) {
+    return { status: "error", message: "Missing business id." };
+  }
+  if (!isSubscriptionStatus(statusRaw)) {
+    return { status: "error", message: "Select a valid subscription status." };
+  }
+  const subscriptionStatus: SubscriptionStatus = statusRaw;
+
+  const supabase = await createClient();
+  const { data: previous } = await supabase
+    .from("businesses")
+    .select("subscription_status")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("businesses")
+    .update({ subscription_status: subscriptionStatus })
+    .eq("id", businessId);
+
+  if (error) {
+    console.error("[admin] update subscription", error);
+    return {
+      status: "error",
+      message: "Could not update subscription status.",
+    };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.business.update_subscription",
+    entityType: "business",
+    entityId: businessId,
+    metadata: {
+      previous_subscription_status: previous?.subscription_status ?? null,
+      subscription_status: subscriptionStatus,
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath(`/admin/businesses/${businessId}`);
+  return {
+    status: "success",
+    message: "Subscription status updated.",
+  };
+}
+
+export async function updateBusinessCapabilities(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  if (!businessId) {
+    return { status: "error", message: "Missing business id." };
+  }
+
+  const enabledKeys = new Set<CapabilityKey>();
+  for (const key of CAPABILITY_KEYS) {
+    if (formData.get(`cap_${key}`) === "on") {
+      enabledKeys.add(key);
+    }
+  }
+
+  const supabase = await createClient();
+  const rows = CAPABILITY_KEYS.map((capability_key) => ({
+    business_id: businessId,
+    capability_key,
+    enabled: enabledKeys.has(capability_key),
+    updated_by: actor.user.id,
+  }));
+
+  const { error } = await supabase.from("business_capabilities").upsert(rows, {
+    onConflict: "business_id,capability_key",
+  });
+
+  if (error) {
+    console.error("[admin] update capabilities", error);
+    return { status: "error", message: "Could not update capabilities." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.capabilities.update",
+    entityType: "business_capability",
+    entityId: businessId,
+    metadata: {
+      enabled: [...enabledKeys].sort(),
+      disabled: CAPABILITY_KEYS.filter((key) => !enabledKeys.has(key)),
+    },
+  });
+
+  revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath("/dashboard");
+  return {
+    status: "success",
+    message: "Capabilities updated.",
   };
 }
 

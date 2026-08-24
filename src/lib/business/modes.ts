@@ -22,6 +22,24 @@ export const DASHBOARD_MODES = ["appointments", "hospitality"] as const;
 
 export type DashboardMode = (typeof DASHBOARD_MODES)[number];
 
+export const SUBSCRIPTION_STATUSES = [
+  "trial",
+  "active",
+  "past_due",
+  "cancelled",
+  "none",
+] as const;
+
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
+  trial: "Trial",
+  active: "Active",
+  past_due: "Past due",
+  cancelled: "Cancelled",
+  none: "None",
+};
+
 export const CAPABILITY_KEYS = [
   "booking_requests",
   "calendar",
@@ -133,6 +151,12 @@ export function isBusinessType(value: string): value is BusinessType {
 
 export function isDashboardMode(value: string): value is DashboardMode {
   return (DASHBOARD_MODES as readonly string[]).includes(value);
+}
+
+export function isSubscriptionStatus(
+  value: string,
+): value is SubscriptionStatus {
+  return (SUBSCRIPTION_STATUSES as readonly string[]).includes(value);
 }
 
 export function isCapabilityKey(value: string): value is CapabilityKey {

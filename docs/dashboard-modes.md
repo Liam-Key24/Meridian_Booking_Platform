@@ -43,3 +43,17 @@ Nav items and routes are filtered/gated by these capabilities server-side.
 
 - `supabase/migrations/20260824073118_business_dashboard_modes.sql`
 - `supabase/migrations/20260824073756_appointments_dashboard_support.sql`
+- `supabase/migrations/20260824120729_admin_subscription_and_ops.sql`
+
+## Admin controls
+
+Meridian admins can view and manage per business:
+
+- name, type, effective dashboard mode, subscription status (ops metadata only)
+- enabled capabilities (toggle + audit)
+- booking / confirmed / cancellation volumes, email activity counts, last activity
+- suspend / reactivate via business status
+- recent audit history without customer PII
+
+Every change goes through admin-only server actions with validation, audit log write, and a confirmation message.
+
