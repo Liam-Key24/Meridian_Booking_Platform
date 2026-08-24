@@ -8,6 +8,8 @@ export type BookingSearchHit = {
   customer_name: string;
   preferred_date: string;
   preferred_time: string;
+  business_id?: string;
+  business_name?: string;
 };
 
 export async function searchBookingsAutocomplete(
@@ -19,27 +21,45 @@ export async function searchBookingsAutocomplete(
   const snapshot = await getAuthSnapshot();
   if (!snapshot) return [];
 
-  const businessId = snapshot.memberships[0]?.business.id;
-  if (!businessId) return [];
-
   const supabase = await createClient();
   const escaped = q.replace(/[%_,]/g, "");
   if (!escaped) return [];
 
-  const { data, error } = await supabase
+  let request = supabase
     .from("bookings")
-    .select("id, customer_name, preferred_date, preferred_time")
-    .eq("business_id", businessId)
+    .select(
+      "id, customer_name, preferred_date, preferred_time, business_id, businesses(name)",
+    )
     .or(
       `customer_name.ilike.%${escaped}%,customer_email.ilike.%${escaped}%`,
     )
     .order("preferred_date", { ascending: false })
     .limit(8);
 
+  if (!snapshot.isMeridianAdmin) {
+    const businessId = snapshot.memberships[0]?.business.id;
+    if (!businessId) return [];
+    request = request.eq("business_id", businessId);
+  }
+
+  const { data, error } = await request;
+
   if (error) {
     console.error("[bookings] autocomplete", error);
     return [];
   }
 
-  return data ?? [];
+  return (data ?? []).map((row) => {
+    const business = Array.isArray(row.businesses)
+      ? row.businesses[0]
+      : row.businesses;
+    return {
+      id: row.id,
+      customer_name: row.customer_name,
+      preferred_date: row.preferred_date,
+      preferred_time: row.preferred_time,
+      business_id: row.business_id,
+      business_name: business?.name,
+    };
+  });
 }

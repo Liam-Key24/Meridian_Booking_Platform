@@ -21,7 +21,8 @@ export type BookingSearchAutocompleteProps = {
 };
 
 function formatHitTime(hit: BookingSearchHit): string {
-  return `${hit.preferred_date} · ${hit.preferred_time.slice(0, 5)}`;
+  const when = `${hit.preferred_date} · ${hit.preferred_time.slice(0, 5)}`;
+  return hit.business_name ? `${when} · ${hit.business_name}` : when;
 }
 
 export function BookingSearchAutocomplete({
