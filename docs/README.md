@@ -2,9 +2,10 @@
 
 ## Contents
 
-- [Hospitality dashboard baseline](./hospitality-dashboard-baseline.md) — audit and protection of the approved hospitality client dashboard before appointments mode
 - [Operations runbook](./operations.md) — current phase, migrations, production env (Upstash / Turnstile / Resend), email retry, templates, onboarding, backups/retention
 - [Cloudflare setup](./cloudflare.md) — DNS proxy, TLS, WAF, bot protection, edge rate limits (manual)
+- [Production readiness](./production-readiness.md) — merge order, env, Cloudflare, manual verification
+- [Hospitality dashboard baseline](./hospitality-dashboard-baseline.md) — freeze hospitality UX before appointments extraction
 - [Security review checklist](./security-review.md) — pre-merge security checks
 - [Architecture](./architecture.md) — tenant model and roles
 - [Tenant isolation](./tenant-isolation.md) — seed users and live RLS verification

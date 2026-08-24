@@ -84,7 +84,17 @@ npm run build
 ```
 
 RLS / tenant isolation procedures: [docs/tenant-isolation.md](docs/tenant-isolation.md).  
-Runbook (env, Resend, Upstash, Turnstile, email retry, templates, backups): [docs/operations.md](docs/operations.md).
+Runbook (env, Resend, Upstash, Turnstile, email retry, templates, backups): [docs/operations.md](docs/operations.md).  
+Cloudflare edge setup: [docs/cloudflare.md](docs/cloudflare.md).  
+Production checklist: [docs/production-readiness.md](docs/production-readiness.md).
+
+## Feature branch merge order
+
+1. `codex/meridian-platform-security-foundation`
+2. `codex/meridian-platform-domain-foundation`
+3. `codex/meridian-platform-production-readiness`
+
+Do not merge from older stale branches once these land.
 
 ## Tenant model
 
