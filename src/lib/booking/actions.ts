@@ -6,6 +6,7 @@ import { getPublicBookingPage } from "@/lib/booking/public-page";
 import {
   buildEmailRateLimitKey,
   buildIpRateLimitKey,
+  getRateLimitHmacSecret,
 } from "@/lib/booking/rate-limit-keys";
 import { assertWithinRateLimit } from "@/lib/booking/rate-limit";
 import { verifyTurnstileToken } from "@/lib/booking/turnstile";
@@ -13,6 +14,11 @@ import {
   validateBookingRequest,
   type BookingRequestInput,
 } from "@/lib/booking/validation";
+import { getTrustedClientIp } from "@/lib/server/client-ip";
+import {
+  createOperationId,
+  logServerEvent,
+} from "@/lib/server/logger";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export type SubmitBookingState = {
@@ -23,10 +29,15 @@ export type SubmitBookingState = {
 const SUCCESS_MESSAGE =
   "Request received. This is not a confirmed booking — the business will review your request and get back to you.";
 
+const RATE_LIMIT_UNAVAILABLE_MESSAGE =
+  "Unable to process this request right now. Please try again shortly.";
+
 export async function submitBookingRequest(
   _prev: SubmitBookingState,
   formData: FormData,
 ): Promise<SubmitBookingState> {
+  const operationId = createOperationId();
+  const startedAt = Date.now();
   const idempotencyKey = String(formData.get("idempotencyKey") ?? "").trim();
   const turnstileToken = String(formData.get("cf-turnstile-response") ?? "");
 
@@ -59,25 +70,57 @@ export async function submitBookingRequest(
   }
 
   const headerStore = await headers();
-  const ip =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    headerStore.get("x-real-ip") ||
-    "unknown";
+  const { ip } = getTrustedClientIp(headerStore);
+  // Stable bucket when IP is unavailable — still scoped by business via key builders
+  const rateLimitIp = ip ?? "unresolved";
 
-  const turnstile = await verifyTurnstileToken(turnstileToken, ip);
+  const turnstile = await verifyTurnstileToken(
+    turnstileToken,
+    ip ?? undefined,
+  );
   if (!turnstile.ok) {
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: "rejected",
+      operationId,
+      errorCategory: "turnstile",
+      durationMs: Date.now() - startedAt,
+    });
     return { status: "error", message: turnstile.error };
   }
 
+  // Production requires HMAC secret before building Redis keys
+  if (!getRateLimitHmacSecret()) {
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: "error",
+      operationId,
+      errorCategory: "rate_limit_unavailable",
+      durationMs: Date.now() - startedAt,
+    });
+    return { status: "error", message: RATE_LIMIT_UNAVAILABLE_MESSAGE };
+  }
+
   const rate = await assertWithinRateLimit({
-    key: buildIpRateLimitKey(validated.data.businessSlug, ip),
+    key: buildIpRateLimitKey(validated.data.businessSlug, rateLimitIp),
     limit: 5,
     windowMs: 15 * 60 * 1000,
   });
   if (!rate.ok) {
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: rate.reason === "unavailable" ? "error" : "rate_limited",
+      operationId,
+      errorCategory:
+        rate.reason === "unavailable" ? "rate_limit_unavailable" : "rate_limit_ip",
+      durationMs: Date.now() - startedAt,
+    });
+    if (rate.reason === "unavailable") {
+      return { status: "error", message: RATE_LIMIT_UNAVAILABLE_MESSAGE };
+    }
     return {
       status: "error",
-      message: `Too many requests. Please try again in about ${rate.retryAfterSeconds} seconds.`,
+      message: `Too many requests. Please try again in about ${rate.retryAfterSeconds ?? 60} seconds.`,
     };
   }
 
@@ -90,6 +133,19 @@ export async function submitBookingRequest(
     windowMs: 60 * 60 * 1000,
   });
   if (!emailRate.ok) {
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: emailRate.reason === "unavailable" ? "error" : "rate_limited",
+      operationId,
+      errorCategory:
+        emailRate.reason === "unavailable"
+          ? "rate_limit_unavailable"
+          : "rate_limit_email",
+      durationMs: Date.now() - startedAt,
+    });
+    if (emailRate.reason === "unavailable") {
+      return { status: "error", message: RATE_LIMIT_UNAVAILABLE_MESSAGE };
+    }
     return {
       status: "error",
       message: "Too many requests from this email. Please try again later.",
@@ -129,6 +185,14 @@ export async function submitBookingRequest(
     .maybeSingle();
 
   if (existing) {
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: "success",
+      operationId,
+      businessId: page.business.id,
+      errorCategory: "idempotent_replay",
+      durationMs: Date.now() - startedAt,
+    });
     return { status: "success", message: SUCCESS_MESSAGE };
   }
 
@@ -154,9 +218,24 @@ export async function submitBookingRequest(
   if (bookingError) {
     // Unique race on idempotency key — treat as success
     if (bookingError.code === "23505") {
+      logServerEvent({
+        event: "booking.public.submit",
+        outcome: "success",
+        operationId,
+        businessId: page.business.id,
+        errorCategory: "idempotent_race",
+        durationMs: Date.now() - startedAt,
+      });
       return { status: "success", message: SUCCESS_MESSAGE };
     }
-    console.error("[booking] insert failed", bookingError);
+    logServerEvent({
+      event: "booking.public.submit",
+      outcome: "error",
+      operationId,
+      businessId: page.business.id,
+      errorCategory: "booking_insert",
+      durationMs: Date.now() - startedAt,
+    });
     return {
       status: "error",
       message: "We couldn't save your request. Please try again.",
@@ -179,12 +258,19 @@ export async function submitBookingRequest(
       service_id: service.id,
       preferred_date: validated.data.preferredDate,
       preferred_time: validated.data.preferredTime,
-      idempotency_key: idempotencyKey,
+      // Do not include customer notes/allergies/PII in event payloads
     },
   });
 
   if (eventError) {
-    console.error("[booking] event insert failed", eventError);
+    logServerEvent({
+      event: "booking.event.insert",
+      outcome: "error",
+      operationId,
+      businessId: page.business.id,
+      errorCategory: "booking_event_insert",
+      durationMs: Date.now() - startedAt,
+    });
   }
 
   try {
@@ -202,9 +288,24 @@ export async function submitBookingRequest(
       guestCount: validated.data.guestCount,
       notes: validated.data.notes,
     });
-  } catch (error) {
-    console.error("[booking] email failed", error);
+  } catch {
+    logServerEvent({
+      event: "booking.email.send",
+      outcome: "error",
+      operationId,
+      businessId: page.business.id,
+      errorCategory: "email_send",
+      durationMs: Date.now() - startedAt,
+    });
   }
+
+  logServerEvent({
+    event: "booking.public.submit",
+    outcome: "success",
+    operationId,
+    businessId: page.business.id,
+    durationMs: Date.now() - startedAt,
+  });
 
   return { status: "success", message: SUCCESS_MESSAGE };
 }

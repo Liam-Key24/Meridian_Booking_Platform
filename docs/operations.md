@@ -35,27 +35,46 @@ Follow [tenant-isolation.md](./tenant-isolation.md):
 | `RESEND_API_KEY` | Transactional email |
 | `EMAIL_FROM` | Verified Resend from-address |
 | `TURNSTILE_SECRET_KEY` | Server-side Turnstile verify (fail closed in production) |
-| `UPSTASH_REDIS_REST_URL` | Durable rate limit |
+| `UPSTASH_REDIS_REST_URL` | Durable rate limit (`@upstash/ratelimit`) |
 | `UPSTASH_REDIS_REST_TOKEN` | Durable rate limit |
+| `BOOKING_RATE_LIMIT_SECRET` | HMAC secret for rate-limit identifiers (min 16 chars) |
+| `TRUSTED_PROXY` | `cloudflare` \| `vercel` \| `none` — trusted client IP source |
 
 Never commit `.env.local` or service-role / Resend / Turnstile / Upstash secrets. Never prefix secrets with `NEXT_PUBLIC_`.
 
 ### Upstash rate limit
 
-- Limits public booking by hashed IP+business slug and secondary hashed customer email.
-- Raw IPs/emails are not stored in Redis keys.
-- Local without Upstash: in-memory fallback (single process only). Documented in `.env.example`.
+- Prefer `@upstash/ratelimit` sliding windows with `@upstash/redis`.
+- Scope: public booking by HMAC-hashed IP + business slug, and secondary hashed customer email.
+- Documented limits: **5 / 15 min per IP+business**, **3 / 60 min per email+business**.
+- Namespaced Redis keys (`meridian:rl` prefix); TTL managed by the limiter.
+- Raw IPs/emails are never stored in Redis keys.
+- **Production:** missing Upstash or `BOOKING_RATE_LIMIT_SECRET`, or Redis failures, **fail closed** with a generic retry message (no in-memory fallback).
+- **Local without Upstash:** in-memory fallback (single process only). Documented in `.env.example`.
+
+### Trusted client IP
+
+- Helper: `src/lib/server/client-ip.ts`.
+- With `TRUSTED_PROXY=cloudflare`, use `CF-Connecting-IP` only.
+- With `TRUSTED_PROXY=vercel`, use `x-vercel-forwarded-for` / `x-real-ip`.
+- Never trust the leftmost `x-forwarded-for` value from untrusted clients.
+- Raw addresses are never logged; hash before rate-limit use.
 
 ### Cloudflare Turnstile
 
-- Widget on public booking form; secret verified server-side before insert.
+- Widget on public booking form; secret verified server-side before insert
+  (`POST https://challenges.cloudflare.com/turnstile/v0/siteverify`).
 - Production: missing secret fails closed.
 - Local: omit secret or set `BOOKING_TURNSTILE_BYPASS=true` (never in production).
+- Use separate development and production Turnstile key pairs.
+- Edge WAF / DNS / TLS setup: [cloudflare.md](./cloudflare.md).
 
 ### Resend
 
 - Used for acknowledgement, business notification, confirmation, decline, suggested time, cancellation.
 - Credentials stay server-only. Delivery attempts land in `email_delivery_logs`.
+- Sender (`EMAIL_FROM`) must be a verified production domain.
+- Booking status and email status remain distinguishable (`pending` booking ≠ email `sent`).
 
 ## Email delivery logs and retry
 
@@ -125,6 +144,24 @@ Retention jobs are not automated in this phase — schedule manually or via futu
 4. After the contractual retention window, delete or anonymise bookings and memberships (service role / controlled SQL — never from the browser).
 5. Record the closure in `audit_logs`.
 
+## Secret rotation
+
+Rotate on compromise or on a regular schedule (at least annually):
+
+1. Supabase publishable + service-role keys (Platform Development / production only — never Marketing).
+2. `TURNSTILE_SECRET_KEY` / site key pair (dev and prod separately).
+3. Upstash REST token + `BOOKING_RATE_LIMIT_SECRET` (rate-limit buckets reset when HMAC secret changes).
+4. `RESEND_API_KEY` and verify sender domain DNS still valid.
+5. Redeploy with updated env; confirm public booking still accepts a test request.
+
+## Structured server logging
+
+Important mutations emit a single JSON line via `logServerEvent` with:
+
+- `operationId`, `event`, `outcome`, optional `businessId`, `durationMs`, `errorCategory`
+
+Never log: passwords, service-role/Resend keys, access tokens, raw IPs, full allergy/notes, or email bodies.
+
 ## Incident handling
 
 1. Contain — revoke compromised user sessions in Supabase Auth; rotate publishable/service keys if leaked.
@@ -132,3 +169,7 @@ Retention jobs are not automated in this phase — schedule manually or via futu
 3. Notify — follow client contract and applicable privacy law.
 4. Remediate — patch RLS/app code; add regression tests under `tests/`.
 5. Review — update this runbook with lessons learned.
+
+## Supabase project separation
+
+Only **Meridian Platform Development** (and future Meridian Platform production) may be linked to this repository. Never connect to Meridian Marketing. Confirm with `npx supabase projects list` before `db push`.

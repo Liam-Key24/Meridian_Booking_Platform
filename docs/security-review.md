@@ -16,5 +16,8 @@ Additional notes:
 - Meridian admin access is `profiles.platform_role = meridian_admin`, not a fake membership on every business.
 - Public booking inserts use the service-role client; anon has no direct table writes.
 - Email delivery attempts are logged for support visibility without exposing Resend keys to the browser.
-- Rate-limit keys hash identifiers; raw IPs/emails are not logged for limiting.
+- Rate-limit keys are HMAC-SHA256 hashed with `BOOKING_RATE_LIMIT_SECRET`; raw IPs/emails are never stored or logged for limiting.
+- Production rate limiting fails closed when Upstash or the HMAC secret is missing/unavailable (no silent in-memory fallback).
+- Client IP uses `TRUSTED_PROXY` (`CF-Connecting-IP` behind Cloudflare); leftmost `X-Forwarded-For` is not trusted.
 - Turnstile secret and Upstash tokens are server-only.
+- Cloudflare edge checklist: [cloudflare.md](./cloudflare.md).

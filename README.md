@@ -12,8 +12,8 @@ Secure, multi-tenant booking-request product used by Meridian client sites. The 
 - **Tailwind CSS** with Meridian design tokens (`#16697A`, `#489FB5`, `#82C0CC`, `#FFA62B`, Plus Jakarta Sans)
 - **Supabase** (Auth, Postgres, RLS) — Meridian Platform Development
 - **Resend** — transactional booking emails (optional locally; required in production)
-- **Upstash Redis** — durable public booking rate limits (in-memory fallback locally)
-- **Cloudflare Turnstile** — anonymous public booking bot protection
+- **Upstash Redis** (`@upstash/ratelimit`) — durable public booking rate limits (in-memory only locally; fail closed in production)
+- **Cloudflare Turnstile** — anonymous public booking bot protection (edge WAF is separate; see `docs/cloudflare.md`)
 
 ## Current status
 
@@ -106,8 +106,10 @@ Roles: `owner`, `staff` (membership) and `meridian_admin` (platform profile role
 | `RESEND_API_KEY` / `EMAIL_FROM` | Transactional email (server-only) |
 | `TURNSTILE_SECRET_KEY` | Turnstile verify (server-only) |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Durable rate limit (server-only) |
+| `BOOKING_RATE_LIMIT_SECRET` | HMAC secret for rate-limit identifiers (server-only) |
+| `TRUSTED_PROXY` | `cloudflare` \| `vercel` \| `none` |
 
-Local-only: `BOOKING_TURNSTILE_BYPASS=true` (never in production). Without Upstash locally, rate limiting falls back to in-memory (documented; not multi-instance safe).
+Local-only: `BOOKING_TURNSTILE_BYPASS=true` (never in production). Without Upstash locally, rate limiting falls back to in-memory (documented; not multi-instance safe). Production rejects public booking mutations if Upstash or the HMAC secret is missing.
 
 ## License
 

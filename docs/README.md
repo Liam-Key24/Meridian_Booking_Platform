@@ -3,6 +3,7 @@
 ## Contents
 
 - [Operations runbook](./operations.md) — current phase, migrations, production env (Upstash / Turnstile / Resend), email retry, templates, onboarding, backups/retention
+- [Cloudflare setup](./cloudflare.md) — DNS proxy, TLS, WAF, bot protection, edge rate limits (manual)
 - [Security review checklist](./security-review.md) — pre-merge security checks
 - [Architecture](./architecture.md) — tenant model and roles
 - [Tenant isolation](./tenant-isolation.md) — seed users and live RLS verification
