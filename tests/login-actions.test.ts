@@ -8,6 +8,8 @@ const redirectMock = vi.fn((path: string) => {
 
 const signInWithPasswordMock = vi.fn();
 const signOutMock = vi.fn();
+const getUserMock = vi.fn();
+const profileMaybeSingleMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   redirect: (path: string) => redirectMock(path),
@@ -18,6 +20,19 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       signInWithPassword: signInWithPasswordMock,
       signOut: signOutMock,
+      getUser: getUserMock,
+    },
+    from: (table: string) => {
+      if (table !== "profiles") {
+        throw new Error(`Unexpected table: ${table}`);
+      }
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: profileMaybeSingleMock,
+          }),
+        }),
+      };
     },
   }),
 }));
@@ -38,6 +53,15 @@ describe("signIn server action", () => {
     redirectMock.mockClear();
     signInWithPasswordMock.mockReset();
     signOutMock.mockReset();
+    getUserMock.mockReset();
+    profileMaybeSingleMock.mockReset();
+
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "user-1", email: "owner@business-a.test" } },
+    });
+    profileMaybeSingleMock.mockResolvedValue({
+      data: { platform_role: null },
+    });
   });
 
   it("redirects clients to a safe internal next path on success", async () => {
@@ -75,6 +99,27 @@ describe("signIn server action", () => {
     ).rejects.toThrow(/NEXT_REDIRECT:\/admin/);
   });
 
+  it("sends Meridian admins to /admin when next is the client home", async () => {
+    signInWithPasswordMock.mockResolvedValue({ error: null });
+    getUserMock.mockResolvedValue({
+      data: { user: { id: "admin-1", email: "admin@meridian.test" } },
+    });
+    profileMaybeSingleMock.mockResolvedValue({
+      data: { platform_role: "meridian_admin" },
+    });
+
+    await expect(
+      signIn(
+        { error: null },
+        formDataFrom({
+          email: "admin@meridian.test",
+          password: "Password123!",
+          next: "/dashboard",
+        }),
+      ),
+    ).rejects.toThrow(/NEXT_REDIRECT:\/admin/);
+  });
+
   it("rejects external next values and uses the default destination", async () => {
     signInWithPasswordMock.mockResolvedValue({ error: null });
 
@@ -106,6 +151,7 @@ describe("signIn server action", () => {
 
     expect(result).toEqual({ error: GENERIC_AUTH_ERROR, field: "form" });
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(getUserMock).not.toHaveBeenCalled();
   });
 
   it("validates empty credentials without calling Supabase", async () => {

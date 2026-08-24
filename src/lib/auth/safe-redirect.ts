@@ -1,4 +1,9 @@
-const DEFAULT_POST_LOGIN_PATH = "/dashboard";
+const DEFAULT_CLIENT_POST_LOGIN_PATH = "/dashboard";
+const DEFAULT_ADMIN_POST_LOGIN_PATH = "/admin";
+
+export type PostLoginOptions = {
+  isMeridianAdmin?: boolean;
+};
 
 /**
  * Accept only safe internal paths for post-login redirects.
@@ -6,7 +11,7 @@ const DEFAULT_POST_LOGIN_PATH = "/dashboard";
  */
 export function getSafeRedirectPath(
   raw: unknown,
-  fallback: string = DEFAULT_POST_LOGIN_PATH,
+  fallback: string = DEFAULT_CLIENT_POST_LOGIN_PATH,
 ): string {
   if (typeof raw !== "string") {
     return fallback;
@@ -50,16 +55,29 @@ export function getSafeRedirectPath(
   return value;
 }
 
-export function getDefaultPostLoginPath(): string {
-  return DEFAULT_POST_LOGIN_PATH;
+export function getDefaultPostLoginPath(isMeridianAdmin = false): string {
+  return isMeridianAdmin
+    ? DEFAULT_ADMIN_POST_LOGIN_PATH
+    : DEFAULT_CLIENT_POST_LOGIN_PATH;
 }
 
 /**
  * Resolve the post-login destination from a raw `next` value.
- * Admin authorization is never decided here — `/admin` remains a valid
- * internal next so authenticated non-admins still hit the server-side
- * protected-access response.
+ * Explicit safe paths are honored (including deeper `/dashboard/...` routes).
+ * Meridian admins without an explicit non-home destination land on `/admin`
+ * instead of the client `/dashboard` home.
  */
-export function resolvePostLoginPath(next: unknown): string {
-  return getSafeRedirectPath(next);
+export function resolvePostLoginPath(
+  next: unknown,
+  options?: PostLoginOptions,
+): string {
+  const isMeridianAdmin = options?.isMeridianAdmin === true;
+  const fallback = getDefaultPostLoginPath(isMeridianAdmin);
+  const safe = getSafeRedirectPath(next, fallback);
+
+  if (isMeridianAdmin && safe === DEFAULT_CLIENT_POST_LOGIN_PATH) {
+    return DEFAULT_ADMIN_POST_LOGIN_PATH;
+  }
+
+  return safe;
 }

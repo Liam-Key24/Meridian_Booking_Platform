@@ -72,6 +72,24 @@ describe("resolvePostLoginPath", () => {
       getDefaultPostLoginPath(),
     );
   });
+
+  it("sends Meridian admins to /admin for the client home default", () => {
+    expect(resolvePostLoginPath(undefined, { isMeridianAdmin: true })).toBe(
+      "/admin",
+    );
+    expect(resolvePostLoginPath("/dashboard", { isMeridianAdmin: true })).toBe(
+      "/admin",
+    );
+    expect(
+      resolvePostLoginPath("https://evil.test", { isMeridianAdmin: true }),
+    ).toBe("/admin");
+  });
+
+  it("still honors deeper dashboard paths for Meridian admins", () => {
+    expect(
+      resolvePostLoginPath("/dashboard/calendar", { isMeridianAdmin: true }),
+    ).toBe("/dashboard/calendar");
+  });
 });
 
 describe("validateLoginCredentials", () => {

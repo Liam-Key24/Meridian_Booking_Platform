@@ -28,6 +28,13 @@ export default async function DashboardLayout({
 
   // Active business from verified cookie / membership — never from mode query.
   const context = await getBusinessContext();
+
+  // Platform admins without a business membership belong on /admin, not the
+  // client dashboard "no membership" empty state.
+  if (!context && snapshot.isMeridianAdmin) {
+    redirect("/admin");
+  }
+
   const business = context?.business;
   const businessName = business?.name ?? "Meridian";
   const role = context?.role ?? "staff";

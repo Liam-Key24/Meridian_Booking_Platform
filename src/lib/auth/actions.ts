@@ -26,8 +26,6 @@ export async function signIn(
     return { error: validation.error, field: validation.field };
   }
 
-  const next = resolvePostLoginPath(formData.get("next"));
-
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
     email: validation.email,
@@ -38,7 +36,21 @@ export async function signIn(
     return { error: GENERIC_AUTH_ERROR, field: "form" };
   }
 
-  redirect(next);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let isMeridianAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("platform_role")
+      .eq("id", user.id)
+      .maybeSingle();
+    isMeridianAdmin = profile?.platform_role === "meridian_admin";
+  }
+
+  redirect(resolvePostLoginPath(formData.get("next"), { isMeridianAdmin }));
 }
 
 export async function signOut() {
