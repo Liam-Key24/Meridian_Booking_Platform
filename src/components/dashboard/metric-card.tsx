@@ -5,20 +5,18 @@ import type { ReactNode } from "react";
 type MetricCardProps = {
   label: string;
   value: number;
-  href: string;
+  /** When omitted, renders a static tile (same visual language, no chevron). */
+  href?: string;
   icon: ReactNode;
 };
 
+const metricShellClass = cn(
+  "flex h-full items-stretch gap-4 rounded-meridian border border-meridian-border bg-meridian-surface p-5",
+);
+
 export function MetricCard({ label, value, href, icon }: MetricCardProps) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex h-full items-stretch gap-4 rounded-meridian border border-meridian-border bg-meridian-surface p-5",
-        "transition-[border-color,box-shadow,transform] hover:border-[color-mix(in_srgb,var(--meridian-accent)_55%,var(--meridian-border))] hover:shadow-[0_8px_24px_color-mix(in_srgb,var(--meridian-accent)_12%,transparent)]",
-        "focus-visible:outline-none focus-visible:shadow-[var(--meridian-focus-ring)]",
-      )}
-    >
+  const body = (
+    <>
       <span
         className="flex size-11 shrink-0 items-center justify-center rounded-meridian-sm bg-[color-mix(in_srgb,var(--meridian-accent)_18%,white)] text-meridian-accent"
         aria-hidden
@@ -33,6 +31,24 @@ export function MetricCard({ label, value, href, icon }: MetricCardProps) {
           {value}
         </span>
       </span>
+    </>
+  );
+
+  if (!href) {
+    return <div className={metricShellClass}>{body}</div>;
+  }
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group",
+        metricShellClass,
+        "transition-[border-color,box-shadow,transform] hover:border-[color-mix(in_srgb,var(--meridian-accent)_55%,var(--meridian-border))] hover:shadow-[0_8px_24px_color-mix(in_srgb,var(--meridian-accent)_12%,transparent)]",
+        "focus-visible:outline-none focus-visible:shadow-[var(--meridian-focus-ring)]",
+      )}
+    >
+      {body}
       <span
         className="flex items-center self-center text-meridian-accent transition-transform group-hover:translate-x-0.5"
         aria-hidden

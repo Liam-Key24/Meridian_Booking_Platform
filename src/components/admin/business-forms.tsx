@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import {
   addBusinessMembership,
@@ -27,6 +27,7 @@ import {
   DASHBOARD_MODE_LABELS,
   SUBSCRIPTION_STATUSES,
   SUBSCRIPTION_STATUS_LABELS,
+  type CapabilityKey,
   type CapabilityMap,
 } from "@/lib/business/modes";
 import type {
@@ -45,12 +46,60 @@ function Feedback({ state }: { state: AdminActionState }) {
       className={
         state.status === "error"
           ? "text-sm text-meridian-status-declined"
-          : "text-sm text-meridian-teal"
+          : "text-sm text-meridian-accent"
       }
       role="status"
     >
       {state.message}
     </p>
+  );
+}
+
+/** Matches client dashboard settings On/Off control. */
+function OnOffToggle({
+  name,
+  label,
+  checked,
+  onChange,
+}: {
+  name: string;
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-meridian border border-meridian-border bg-meridian-surface px-4 py-3 select-none">
+      <span className="text-sm font-medium text-meridian-text">{label}</span>
+      <span className="inline-flex items-center gap-2.5">
+        <span
+          className={
+            checked
+              ? "text-sm font-medium text-meridian-text"
+              : "text-sm text-meridian-text-muted"
+          }
+        >
+          {checked ? "On" : "Off"}
+        </span>
+        <span className="relative inline-flex h-7 w-12 shrink-0 items-center">
+          <input
+            type="checkbox"
+            name={name}
+            value="on"
+            checked={checked}
+            onChange={(event) => onChange(event.target.checked)}
+            className="peer sr-only"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none h-7 w-full rounded-full border border-meridian-border bg-meridian-surface-subtle transition-colors peer-checked:border-meridian-accent peer-checked:bg-meridian-accent peer-focus-visible:shadow-[var(--meridian-focus-ring)]"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-0.5 left-0.5 size-6 rounded-full bg-meridian-surface shadow-sm transition-transform peer-checked:translate-x-5"
+          />
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -166,13 +215,19 @@ export function BusinessDashboardModeForm({
         }))}
       />
       <label className="flex items-center gap-2 text-sm text-meridian-text">
-        <input type="checkbox" name="resetCapabilities" className="size-4" />
+        <input
+          type="checkbox"
+          name="resetCapabilities"
+          className="size-4 rounded border-meridian-border"
+        />
         Force reset capabilities to mode defaults
       </label>
-      <Feedback state={state} />
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? "Saving…" : "Update type and mode"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Update type and mode"}
+        </Button>
+        <Feedback state={state} />
+      </div>
     </form>
   );
 }
@@ -222,28 +277,31 @@ export function BusinessCapabilitiesForm({
     updateBusinessCapabilities,
     initialState,
   );
+  const [enabled, setEnabled] = useState<CapabilityMap>(capabilities);
+
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-5">
       <input type="hidden" name="businessId" value={businessId} />
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {CAPABILITY_KEYS.map((key) => (
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {CAPABILITY_KEYS.map((key: CapabilityKey) => (
           <li key={key}>
-            <label className="flex items-center gap-2 text-sm text-meridian-text">
-              <input
-                type="checkbox"
-                name={`cap_${key}`}
-                defaultChecked={capabilities[key]}
-                className="size-4"
-              />
-              {CAPABILITY_LABELS[key]}
-            </label>
+            <OnOffToggle
+              name={`cap_${key}`}
+              label={CAPABILITY_LABELS[key]}
+              checked={enabled[key]}
+              onChange={(next) =>
+                setEnabled((current) => ({ ...current, [key]: next }))
+              }
+            />
           </li>
         ))}
       </ul>
-      <Feedback state={state} />
-      <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? "Saving…" : "Save capabilities"}
-      </Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save capabilities"}
+        </Button>
+        <Feedback state={state} />
+      </div>
     </form>
   );
 }

@@ -35,28 +35,28 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col">
+    <div className="flex min-h-full flex-1 flex-col bg-[color-mix(in_srgb,var(--meridian-surface-muted)_55%,white)]">
       <header className="border-b border-meridian-border bg-meridian-surface">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 px-[var(--meridian-space-page)] py-4">
           <div>
             <p className="text-xs font-semibold tracking-wide text-meridian-accent uppercase">
-              Meridian admin
+              Meridian
             </p>
             <p className="text-lg font-semibold text-meridian-text">
-              Platform operations
+              Platform admin
             </p>
           </div>
-          <nav className="flex flex-wrap items-center gap-2">
+          <nav className="flex flex-wrap items-center gap-1">
             {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-meridian-sm px-3 py-2 text-sm font-medium text-meridian-text-muted transition-colors hover:bg-meridian-surface-muted hover:text-meridian-text"
+                className="rounded-meridian-sm px-3 py-2 text-sm font-medium text-meridian-text-muted transition-colors hover:bg-[color-mix(in_srgb,var(--meridian-accent)_12%,white)] hover:text-meridian-text"
               >
                 {item.label}
               </Link>
             ))}
-            <form action={signOut}>
+            <form action={signOut} className="ml-1">
               <Button type="submit" variant="secondary" size="sm">
                 Sign out
               </Button>

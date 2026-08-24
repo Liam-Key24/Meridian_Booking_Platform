@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge, Card, EmptyState } from "@/components/ui";
+import { Card, EmptyState } from "@/components/ui";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
 import {
   BUSINESS_TYPE_LABELS,
@@ -24,21 +24,20 @@ export default async function AdminBusinessesPage() {
     .order("name");
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-12">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-10">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <Badge tone="accent">Meridian admin</Badge>
           <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
             Businesses
           </h1>
-          <p className="text-meridian-text-muted">
-            Platform-level tenant list. Access is gated by meridian_admin and
-            RLS.
+          <p className="max-w-2xl text-meridian-text-muted">
+            Platform tenants and their dashboard mode. Open a business to manage
+            capabilities, subscription metadata, and ops health.
           </p>
         </div>
         <Link
           href="/admin/businesses/new"
-          className="inline-flex h-11 items-center justify-center rounded-meridian bg-meridian-teal px-5 text-sm font-semibold text-meridian-text-inverse"
+          className="inline-flex h-11 items-center justify-center rounded-meridian bg-meridian-accent px-5 text-sm font-semibold text-meridian-text-inverse"
         >
           New business
         </Link>
@@ -75,26 +74,39 @@ export default async function AdminBusinessesPage() {
               return (
                 <li
                   key={business.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  className="flex flex-wrap items-center justify-between gap-3 py-4"
                 >
-                  <div>
+                  <div className="space-y-1.5">
                     <Link
                       href={`/admin/businesses/${business.id}`}
-                      className="font-semibold text-meridian-text hover:text-meridian-teal"
+                      className="font-semibold text-meridian-text hover:text-meridian-accent"
                     >
                       {business.name}
                     </Link>
                     <p className="text-sm text-meridian-text-muted">
-                      /book/{business.slug} · {typeLabel} ·{" "}
-                      {DASHBOARD_MODE_LABELS[mode]} ·{" "}
-                      {SUBSCRIPTION_STATUS_LABELS[subscription]}
+                      /book/{business.slug}
                     </p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center rounded-meridian-sm bg-meridian-surface-muted px-2 py-0.5 text-[11px] font-semibold tracking-wide text-meridian-accent uppercase">
+                        {DASHBOARD_MODE_LABELS[mode]}
+                      </span>
+                      <span className="inline-flex items-center rounded-meridian-sm bg-meridian-surface-muted px-2 py-0.5 text-[11px] font-semibold tracking-wide text-meridian-text-muted uppercase">
+                        {typeLabel}
+                      </span>
+                      <span className="inline-flex items-center rounded-meridian-sm bg-meridian-surface-muted px-2 py-0.5 text-[11px] font-semibold tracking-wide text-meridian-text-muted uppercase">
+                        {SUBSCRIPTION_STATUS_LABELS[subscription]}
+                      </span>
+                    </div>
                   </div>
-                  <Badge
-                    tone={business.status === "active" ? "teal" : "soft"}
+                  <span
+                    className={
+                      business.status === "active"
+                        ? "inline-flex items-center rounded-meridian-sm bg-[color-mix(in_srgb,var(--meridian-accent)_16%,white)] px-2.5 py-1 text-xs font-semibold text-meridian-accent uppercase"
+                        : "inline-flex items-center rounded-meridian-sm bg-meridian-surface-muted px-2.5 py-1 text-xs font-semibold text-meridian-text-muted uppercase"
+                    }
                   >
                     {business.status}
-                  </Badge>
+                  </span>
                 </li>
               );
             })}
