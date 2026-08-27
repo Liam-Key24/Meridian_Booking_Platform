@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useState } from "react";
+import { useActionState, useEffect, useId, useMemo, useState } from "react";
 import {
   CalendarBlank,
   Clock,
@@ -25,7 +25,7 @@ import {
   switchActiveBusiness,
   type SwitchBusinessState,
 } from "@/lib/auth/switch-business";
-import { BookingSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
+import { DashboardSearchAutocomplete } from "@/components/dashboard/booking-search-autocomplete";
 import {
   HOSPITALITY_NAV,
   pageTitleForPath,
@@ -34,7 +34,6 @@ import {
 } from "@/components/dashboard/shared/dashboard-nav";
 import type { DashboardMode } from "@/lib/business/modes";
 import { cn } from "@/lib/cn";
-import { useActionState } from "react";
 
 export type DashboardShellProps = {
   businessName: string;
@@ -119,10 +118,14 @@ export function DashboardShell({
   const ModeIcon = isAppointments ? Scissors : ForkKnife;
   const hoursLabel = isAppointments ? "Availability" : "Opening times";
   const searchPlaceholder = isAppointments
-    ? "Search appointments…"
-    : "Search bookings…";
+    ? "Search appointments or settings…"
+    : "Search bookings or settings…";
   const addLabel = isAppointments ? "Add appointment" : "Add booking";
   const productLabel = isAppointments ? "Appointments" : "Bookings";
+  const searchAllowedHrefs = useMemo(
+    () => nav.map((item) => item.href),
+    [nav],
+  );
 
   const sidebar = (
     <aside className="flex h-full w-72 flex-col gap-5 border-r border-meridian-border bg-meridian-surface px-5 py-6">
@@ -363,12 +366,14 @@ export function DashboardShell({
               className="order-last w-full min-w-0 flex-1 basis-full md:order-none md:basis-0"
               role="search"
             >
-              <BookingSearchAutocomplete
+              <DashboardSearchAutocomplete
                 name="q"
                 placeholder={searchPlaceholder}
                 size="md"
                 className="mx-auto w-full max-w-xl"
                 inputClassName="bg-meridian-surface-muted"
+                dashboardMode={dashboardMode}
+                allowedHrefs={searchAllowedHrefs}
               />
             </form>
 

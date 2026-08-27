@@ -1,64 +1,103 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/cn";
 import {
   searchBookingsAutocomplete,
   type BookingSearchHit,
 } from "@/lib/dashboard/booking-search";
+import {
+  matchSearchSuggestions,
+  type DashboardSearchSuggestion,
+} from "@/lib/dashboard/search-suggestions";
+import type { DashboardMode } from "@/lib/business/modes";
 
-export type BookingSearchAutocompleteProps = {
+export type DashboardSearchAutocompleteProps = {
   name?: string;
   defaultValue?: string;
   placeholder?: string;
   size?: "sm" | "md";
   className?: string;
   inputClassName?: string;
-  /** When a suggestion is chosen. Defaults to navigating to the booking detail page. */
+  dashboardMode?: DashboardMode;
+  /** Capability-filtered nav hrefs used to hide unavailable suggestions. */
+  allowedHrefs?: readonly string[];
+  onSelectBooking?: (hit: BookingSearchHit) => void;
+  /** @deprecated Prefer onSelectBooking */
   onSelectHit?: (hit: BookingSearchHit) => void;
   showIcon?: boolean;
 };
+
+type CombinedHit =
+  | { kind: "suggestion"; suggestion: DashboardSearchSuggestion }
+  | { kind: "booking"; booking: BookingSearchHit };
+
+/** @deprecated Use DashboardSearchAutocomplete */
+export type BookingSearchAutocompleteProps = DashboardSearchAutocompleteProps;
 
 function formatHitTime(hit: BookingSearchHit): string {
   const when = `${hit.preferred_date} · ${hit.preferred_time.slice(0, 5)}`;
   return hit.business_name ? `${when} · ${hit.business_name}` : when;
 }
 
-export function BookingSearchAutocomplete({
+export function DashboardSearchAutocomplete({
   name = "q",
   defaultValue = "",
-  placeholder = "Search bookings…",
+  placeholder = "Search bookings or settings…",
   size = "md",
   className,
   inputClassName,
+  dashboardMode = "hospitality",
+  allowedHrefs = [],
+  onSelectBooking,
   onSelectHit,
   showIcon = true,
-}: BookingSearchAutocompleteProps) {
+}: DashboardSearchAutocompleteProps) {
   const router = useRouter();
+  const handleBookingSelect = onSelectBooking ?? onSelectHit;
   const listId = useId();
   const inputId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState(defaultValue);
   const [open, setOpen] = useState(false);
-  const [hits, setHits] = useState<BookingSearchHit[]>([]);
+  const [bookingHits, setBookingHits] = useState<BookingSearchHit[]>([]);
   const [pending, startTransition] = useTransition();
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [focused, setFocused] = useState(false);
+
+  const suggestions = useMemo(
+    () =>
+      matchSearchSuggestions({
+        query: value,
+        mode: dashboardMode,
+        allowedHrefs,
+        limit: 5,
+      }),
+    [value, dashboardMode, allowedHrefs],
+  );
+
+  const combined: CombinedHit[] = useMemo(() => {
+    const rows: CombinedHit[] = suggestions.map((suggestion) => ({
+      kind: "suggestion",
+      suggestion,
+    }));
+    for (const booking of bookingHits) {
+      rows.push({ kind: "booking", booking });
+    }
+    return rows;
+  }, [suggestions, bookingHits]);
 
   useEffect(() => {
     const q = value.trim();
     const handle = window.setTimeout(() => {
       startTransition(async () => {
         if (q.length < 1) {
-          setHits([]);
-          setOpen(false);
-          setActiveIndex(-1);
+          setBookingHits([]);
           return;
         }
         const next = await searchBookingsAutocomplete(q);
-        setHits(next);
-        setOpen(true);
-        setActiveIndex(-1);
+        setBookingHits(next);
       });
     }, 200);
 
@@ -69,29 +108,53 @@ export function BookingSearchAutocomplete({
     const onPointer = (event: MouseEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
+        setFocused(false);
       }
     };
     window.addEventListener("mousedown", onPointer);
     return () => window.removeEventListener("mousedown", onPointer);
   }, []);
 
-  const choose = (hit: BookingSearchHit) => {
+  const chooseSuggestion = (suggestion: DashboardSearchSuggestion) => {
+    setValue("");
+    setOpen(false);
+    setFocused(false);
+    router.push(suggestion.href);
+  };
+
+  const chooseBooking = (hit: BookingSearchHit) => {
     setValue(hit.customer_name);
     setOpen(false);
-    if (onSelectHit) {
-      onSelectHit(hit);
+    setFocused(false);
+    if (handleBookingSelect) {
+      handleBookingSelect(hit);
       return;
     }
-    router.push(`/dashboard/bookings?open=${encodeURIComponent(hit.id)}&period=custom`);
+    router.push(
+      `/dashboard/bookings?open=${encodeURIComponent(hit.id)}&period=custom`,
+    );
+  };
+
+  const choose = (hit: CombinedHit) => {
+    if (hit.kind === "suggestion") chooseSuggestion(hit.suggestion);
+    else chooseBooking(hit.booking);
   };
 
   const heightClass = size === "sm" ? "h-9 text-sm" : "h-11 text-sm";
-  const showList = open && value.trim().length > 0;
+  const q = value.trim();
+  const showList =
+    open &&
+    focused &&
+    (q.length === 0 ? suggestions.length > 0 : combined.length > 0 || !pending);
+  const emptyMessage =
+    q.length > 0 && !pending && combined.length === 0
+      ? "No bookings or settings found"
+      : null;
 
   return (
     <div ref={rootRef} className={cn("relative w-full", className)}>
       <label htmlFor={inputId} className="sr-only">
-        Search bookings
+        Search bookings or settings
       </label>
       {showIcon ? (
         <span
@@ -117,25 +180,35 @@ export function BookingSearchAutocomplete({
         }
         value={value}
         placeholder={placeholder}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          setOpen(true);
+          setActiveIndex(-1);
+        }}
         onFocus={() => {
-          if (hits.length > 0 && value.trim().length > 0) setOpen(true);
+          setFocused(true);
+          setOpen(true);
         }}
         onKeyDown={(event) => {
-          if (!showList || hits.length === 0) return;
+          if (!showList) return;
+          const count = emptyMessage ? 0 : combined.length;
+          if (count === 0) {
+            if (event.key === "Escape") setOpen(false);
+            return;
+          }
           if (event.key === "ArrowDown") {
             event.preventDefault();
             setActiveIndex((index) =>
-              index + 1 >= hits.length ? 0 : index + 1,
+              index + 1 >= count ? 0 : index + 1,
             );
           } else if (event.key === "ArrowUp") {
             event.preventDefault();
             setActiveIndex((index) =>
-              index <= 0 ? hits.length - 1 : index - 1,
+              index <= 0 ? count - 1 : index - 1,
             );
           } else if (event.key === "Enter" && activeIndex >= 0) {
             event.preventDefault();
-            const hit = hits[activeIndex];
+            const hit = combined[activeIndex];
             if (hit) choose(hit);
           } else if (event.key === "Escape") {
             setOpen(false);
@@ -153,43 +226,105 @@ export function BookingSearchAutocomplete({
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-[calc(100%+0.35rem)] right-0 left-0 z-40 overflow-hidden rounded-meridian border border-meridian-border bg-meridian-surface shadow-[0_16px_40px_rgba(20,58,68,0.14)]"
+          className="absolute top-[calc(100%+0.35rem)] right-0 left-0 z-40 max-h-80 overflow-auto rounded-meridian border border-meridian-border bg-meridian-surface shadow-[0_16px_40px_rgba(20,58,68,0.14)]"
         >
-          {pending && hits.length === 0 ? (
-            <li className="px-3 py-3 text-sm text-meridian-text-muted">
-              Searching…
+          {q.length === 0 ? (
+            <li className="px-3 pt-2.5 pb-1 text-[11px] font-semibold tracking-wide text-meridian-text-muted uppercase">
+              Suggestions
             </li>
-          ) : hits.length === 0 ? (
+          ) : null}
+          {pending && q.length > 0 && combined.length === suggestions.length ? (
+            <li className="px-3 py-2 text-xs text-meridian-text-muted">
+              Searching bookings…
+            </li>
+          ) : null}
+          {emptyMessage ? (
             <li className="px-3 py-3 text-sm text-meridian-text-muted">
-              No bookings found
+              {emptyMessage}
             </li>
           ) : (
-            hits.map((hit, index) => (
-              <li key={hit.id} role="option" aria-selected={index === activeIndex}>
-                <button
-                  id={`${listId}-option-${index}`}
-                  type="button"
-                  className={cn(
-                    "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
-                    index === activeIndex
-                      ? "bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
-                      : "hover:bg-meridian-surface-muted",
-                  )}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => choose(hit)}
+            combined.map((hit, index) => {
+              const selected = index === activeIndex;
+              if (hit.kind === "suggestion") {
+                const { suggestion } = hit;
+                return (
+                  <li
+                    key={`s-${suggestion.id}`}
+                    role="option"
+                    aria-selected={selected}
+                  >
+                    <button
+                      id={`${listId}-option-${index}`}
+                      type="button"
+                      className={cn(
+                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
+                        selected
+                          ? "bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
+                          : "hover:bg-meridian-surface-muted",
+                      )}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => chooseSuggestion(suggestion)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-sm font-semibold text-meridian-text">
+                          {suggestion.label}
+                        </span>
+                        <span className="rounded-meridian-sm bg-meridian-surface-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-meridian-teal uppercase">
+                          Page
+                        </span>
+                      </span>
+                      <span className="truncate text-xs text-meridian-text-muted">
+                        {suggestion.description}
+                      </span>
+                    </button>
+                  </li>
+                );
+              }
+
+              const { booking } = hit;
+              return (
+                <li
+                  key={`b-${booking.id}`}
+                  role="option"
+                  aria-selected={selected}
                 >
-                  <span className="truncate text-sm font-semibold text-meridian-text">
-                    {hit.customer_name}
-                  </span>
-                  <span className="truncate text-xs text-meridian-text-muted">
-                    {formatHitTime(hit)}
-                  </span>
-                </button>
-              </li>
-            ))
+                  <button
+                    id={`${listId}-option-${index}`}
+                    type="button"
+                    className={cn(
+                      "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
+                      selected
+                        ? "bg-[color-mix(in_srgb,var(--meridian-accent)_14%,white)]"
+                        : "hover:bg-meridian-surface-muted",
+                    )}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    onClick={() => chooseBooking(booking)}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-meridian-text">
+                        {booking.customer_name}
+                      </span>
+                      <span className="rounded-meridian-sm bg-meridian-surface-muted px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-meridian-blue uppercase">
+                        Booking
+                      </span>
+                    </span>
+                    <span className="truncate text-xs text-meridian-text-muted">
+                      {formatHitTime(booking)}
+                    </span>
+                  </button>
+                </li>
+              );
+            })
           )}
         </ul>
       ) : null}
     </div>
   );
+}
+
+/** @deprecated Prefer DashboardSearchAutocomplete */
+export function BookingSearchAutocomplete(
+  props: DashboardSearchAutocompleteProps,
+) {
+  return <DashboardSearchAutocomplete {...props} />;
 }
