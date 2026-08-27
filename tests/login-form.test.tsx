@@ -122,7 +122,7 @@ describe("LoginForm", () => {
     );
   });
 
-  it("tracks failed attempts without showing forgot-password when reset is unavailable", async () => {
+  it("keeps forgot-password hidden when reset is unavailable", async () => {
     const user = userEvent.setup();
     signInMock.mockResolvedValue({
       error: GENERIC_AUTH_ERROR,

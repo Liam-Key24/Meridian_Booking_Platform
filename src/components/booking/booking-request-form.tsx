@@ -7,6 +7,7 @@ import {
   submitBookingRequest,
   type SubmitBookingState,
 } from "@/lib/booking/actions";
+import type { DashboardMode } from "@/lib/business/modes";
 
 type ServiceOption = {
   id: string;
@@ -20,6 +21,8 @@ type BookingRequestFormProps = {
   businessName: string;
   services: ServiceOption[];
   turnstileSiteKey?: string | null;
+  dashboardMode?: DashboardMode;
+  maxPartySize?: number | null;
 };
 
 const initialState: SubmitBookingState = {
@@ -39,6 +42,8 @@ export function BookingRequestForm({
   businessName,
   services,
   turnstileSiteKey,
+  dashboardMode = "hospitality",
+  maxPartySize = null,
 }: BookingRequestFormProps) {
   const [state, formAction, pending] = useActionState(
     submitBookingRequest,
@@ -46,6 +51,9 @@ export function BookingRequestForm({
   );
   const turnstileId = useId();
   const idempotencyKey = useMemo(() => createIdempotencyKey(), []);
+  const isHospitality = dashboardMode === "hospitality";
+  const partyMax =
+    maxPartySize && maxPartySize > 0 ? maxPartySize : isHospitality ? 20 : 100;
 
   if (state.status === "success") {
     return (
@@ -115,17 +123,19 @@ export function BookingRequestForm({
           placeholder="+44…"
           autoComplete="tel"
         />
-        <Select
-          label="Service"
-          name="serviceId"
-          required
-          placeholder="Select a service"
-          defaultValue=""
-          options={services.map((service) => ({
-            value: service.id,
-            label: `${service.name} (${service.duration_minutes} min)`,
-          }))}
-        />
+        {!isHospitality && services.length > 0 ? (
+          <Select
+            label="Service"
+            name="serviceId"
+            required
+            placeholder="Select a service"
+            defaultValue=""
+            options={services.map((service) => ({
+              value: service.id,
+              label: `${service.name} (${service.duration_minutes} min)`,
+            }))}
+          />
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Preferred date"
@@ -141,16 +151,26 @@ export function BookingRequestForm({
           />
         </div>
         <Input
-          label="Guest count (optional)"
+          label={
+            isHospitality
+              ? `Party size${maxPartySize ? ` (max ${maxPartySize})` : ""}`
+              : "Guest count (optional)"
+          }
           name="guestCount"
           type="number"
           min={1}
-          max={100}
+          max={partyMax}
+          required={isHospitality}
+          defaultValue={isHospitality ? "2" : undefined}
         />
         <Textarea
           label="Notes (optional)"
           name="notes"
-          placeholder="Anything we should know?"
+          placeholder={
+            isHospitality
+              ? "Allergies, occasion, seating preferences…"
+              : "Anything we should know?"
+          }
           rows={3}
         />
 

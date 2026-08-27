@@ -1,5 +1,6 @@
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { BookingRequestForm } from "@/components/booking/booking-request-form";
+import type { DashboardMode } from "@/lib/business/modes";
 import type { BookingMode } from "@/types/database";
 
 export type BookingWidgetService = {
@@ -16,6 +17,8 @@ export type BookingWidgetProps = {
   externalBookingUrl: string | null;
   services: BookingWidgetService[];
   turnstileSiteKey?: string | null;
+  dashboardMode?: DashboardMode;
+  maxPartySize?: number | null;
   /** Optional className for embed layouts on Meridian client sites. */
   className?: string;
 };
@@ -31,6 +34,8 @@ export function BookingWidget({
   externalBookingUrl,
   services,
   turnstileSiteKey,
+  dashboardMode = "hospitality",
+  maxPartySize = null,
   className,
 }: BookingWidgetProps) {
   if (bookingMode === "external") {
@@ -45,6 +50,8 @@ export function BookingWidget({
   }
 
   const showExternal = bookingMode === "hybrid" && Boolean(externalBookingUrl);
+  const isHospitality = dashboardMode === "hospitality";
+  const canShowForm = isHospitality || services.length > 0;
 
   return (
     <div className={className}>
@@ -59,7 +66,9 @@ export function BookingWidget({
           <p className="text-meridian-text-muted">
             {bookingMode === "hybrid"
               ? "Request a time through Meridian, or continue with the business’s existing booking provider."
-              : "Submit a request. This does not confirm your booking."}
+              : isHospitality
+                ? "Request a table. This does not confirm your booking."
+                : "Submit a request. This does not confirm your booking."}
           </p>
         </header>
 
@@ -80,10 +89,10 @@ export function BookingWidget({
         ) : null}
 
         <Card
-          title="Request via Meridian"
+          title={isHospitality ? "Request a table" : "Request via Meridian"}
           description="We’ll send your preferred time to the business for review."
         >
-          {services.length === 0 ? (
+          {!canShowForm ? (
             <EmptyState
               title="No services available"
               description="This business has not published bookable services yet."
@@ -94,6 +103,8 @@ export function BookingWidget({
               businessName={businessName}
               services={services}
               turnstileSiteKey={turnstileSiteKey}
+              dashboardMode={dashboardMode}
+              maxPartySize={maxPartySize}
             />
           )}
         </Card>

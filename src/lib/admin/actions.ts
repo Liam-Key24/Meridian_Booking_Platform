@@ -598,6 +598,7 @@ export async function updateAdminBookingSettings(
   });
 
   revalidatePath(`/admin/businesses/${businessId}`);
+  await revalidatePublicBookPath(businessId);
   return { status: "success", message: "Settings saved." };
 }
 
@@ -681,5 +682,18 @@ export async function upsertAdminService(
   }
 
   revalidatePath(`/admin/businesses/${businessId}`);
+  await revalidatePublicBookPath(businessId);
   return { status: "success", message: "Service saved." };
+}
+
+async function revalidatePublicBookPath(businessId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("businesses")
+    .select("slug")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (data?.slug) {
+    revalidatePath(`/book/${data.slug}`);
+  }
 }

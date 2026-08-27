@@ -96,13 +96,20 @@ Statuses: `pending`, `sent`, `failed`, `skipped`.
 
 ## Admin onboarding process
 
-1. Create the business in `/admin/businesses/new` (slug, notification email, timezone).
-2. Ask the client owner to sign up (email/password).
+1. Create the business in `/admin/businesses/new` (slug, notification email, timezone, dashboard mode).
+2. Create the owner Auth user in Supabase Auth (email/password), or ask them to sign up if self-signup is enabled.
 3. Add their membership as `owner` on the business detail page.
-4. Configure booking mode + services (admin or client dashboard settings).
-5. Optionally assign an active site template and open `/preview/[slug]`.
-6. Share `/book/[slug]` and confirm a test pending request (Turnstile/Upstash configured in prod).
-7. Confirm email logs for acknowledgement + business notification.
+4. Share `/login` — owners can use **Forgot password?** (`/login/forgot-password`) if needed.
+5. Configure hospitality settings (hours, party size) or appointments services/staff from the client dashboard / admin.
+6. Optionally assign an active site template and open `/preview/[slug]`.
+7. Share `/book/[slug]` and confirm a test pending request (Turnstile/Upstash configured in prod).
+8. Confirm email logs for acknowledgement + business notification.
+
+### Password reset (Supabase Auth)
+
+- App routes: `/login/forgot-password` → email link → `/auth/callback` → `/login/update-password`.
+- In the Supabase project Auth settings, allow redirect URL: `{NEXT_PUBLIC_SITE_URL}/auth/callback`.
+- Configure Auth email templates / SMTP (or Resend SMTP) so reset messages deliver in production.
 
 ## Backups and restore testing
 

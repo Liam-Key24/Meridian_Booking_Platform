@@ -4,13 +4,11 @@ import Link from "next/link";
 import { useActionState, useId, useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { signIn, type AuthActionState } from "@/lib/auth/actions";
-import {
-  incrementFailedAttempts,
-  resetFailedAttempts,
-  shouldShowForgotPassword,
-} from "@/lib/auth/failed-attempts";
 import { validateLoginCredentials } from "@/lib/auth/login-validation";
-import { PASSWORD_RESET_HREF } from "@/lib/auth/password-reset";
+import {
+  isPasswordResetAvailable,
+  PASSWORD_RESET_HREF,
+} from "@/lib/auth/password-reset";
 
 const initialState: AuthActionState = { error: null, field: null };
 
@@ -26,20 +24,13 @@ export function LoginForm({ next }: LoginFormProps) {
     field: "email" | "password" | "form";
     message: string;
   } | null>(null);
-  const [failedAttempts, setFailedAttempts] = useState(0);
   const [isPending, startTransition] = useTransition();
   const formErrorId = useId();
   const emailFieldId = useId();
   const passwordFieldId = useId();
 
   const [state, dispatch, actionPending] = useActionState(
-    async (prev: AuthActionState, formData: FormData) => {
-      const result = await signIn(prev, formData);
-      if (result.error && result.field === "form") {
-        setFailedAttempts((current) => incrementFailedAttempts(current));
-      }
-      return result;
-    },
+    signIn,
     initialState,
   );
 
@@ -64,7 +55,7 @@ export function LoginForm({ next }: LoginFormProps) {
         ? state.error
         : null;
 
-  const showForgotPassword = shouldShowForgotPassword(failedAttempts);
+  const showForgotPassword = isPasswordResetAvailable();
 
   function handleSubmit(formData: FormData) {
     if (pending) {
@@ -96,7 +87,6 @@ export function LoginForm({ next }: LoginFormProps) {
     setPassword("");
     setShowPassword(false);
     setClientError(null);
-    setFailedAttempts(resetFailedAttempts());
   }
 
   return (

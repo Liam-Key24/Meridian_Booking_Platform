@@ -53,4 +53,24 @@ describe("validateBookingRequest", () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  it("accepts hospitality requests without a service", () => {
+    const result = validateBookingRequest(
+      { ...base, serviceId: "" },
+      { requireService: false, requireGuestCount: true },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.serviceId).toBeNull();
+      expect(result.data.guestCount).toBe(2);
+    }
+  });
+
+  it("enforces max party size when provided", () => {
+    const result = validateBookingRequest(
+      { ...base, guestCount: "8" },
+      { requireService: false, requireGuestCount: true, maxGuestCount: 6 },
+    );
+    expect(result.ok).toBe(false);
+  });
 });

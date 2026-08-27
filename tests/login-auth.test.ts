@@ -194,10 +194,15 @@ describe("failed login UX helpers", () => {
   });
 
   it("never shows forgot-password when reset is unavailable", () => {
-    expect(PASSWORD_RESET_AVAILABLE).toBe(false);
     expect(shouldShowForgotPassword(3, false)).toBe(false);
     expect(shouldShowForgotPassword(10, false)).toBe(false);
-    expect(shouldShowForgotPassword(3)).toBe(false);
+  });
+
+  it("exposes password reset as available for the wired flow", () => {
+    expect(PASSWORD_RESET_AVAILABLE).toBe(true);
+    expect(shouldShowForgotPassword(FAILED_ATTEMPTS_BEFORE_RESET_HINT)).toBe(
+      true,
+    );
   });
 
   it("keeps auth errors generic without account enumeration", () => {

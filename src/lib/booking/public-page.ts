@@ -1,17 +1,29 @@
 import "server-only";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import type { DashboardMode } from "@/lib/business/modes";
 import type { Tables } from "@/types/database";
 
 export type PublicBookingPage = {
-  business: Pick<Tables<"businesses">, "id" | "name" | "slug" | "status">;
+  business: Pick<
+    Tables<"businesses">,
+    "id" | "name" | "slug" | "status" | "dashboard_mode"
+  >;
   settings: Pick<
     Tables<"booking_settings">,
-    "timezone" | "booking_mode" | "external_booking_url" | "notification_email"
+    | "timezone"
+    | "booking_mode"
+    | "external_booking_url"
+    | "notification_email"
+    | "max_party_size"
+    | "opening_hours"
+    | "holidays"
+    | "booking_slot_minutes"
   >;
   services: Array<
     Pick<Tables<"services">, "id" | "name" | "description" | "duration_minutes">
   >;
+  dashboardMode: DashboardMode;
 };
 
 /** Load public booking page data via service role (never exposed to the browser). */
@@ -22,7 +34,7 @@ export async function getPublicBookingPage(
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id, name, slug, status")
+    .select("id, name, slug, status, dashboard_mode")
     .eq("slug", slug)
     .eq("status", "active")
     .maybeSingle();
@@ -33,7 +45,9 @@ export async function getPublicBookingPage(
 
   const { data: settings } = await supabase
     .from("booking_settings")
-    .select("timezone, booking_mode, external_booking_url, notification_email")
+    .select(
+      "timezone, booking_mode, external_booking_url, notification_email, max_party_size, opening_hours, holidays, booking_slot_minutes",
+    )
     .eq("business_id", business.id)
     .maybeSingle();
 
@@ -41,11 +55,15 @@ export async function getPublicBookingPage(
     return null;
   }
 
+  const dashboardMode =
+    (business.dashboard_mode as DashboardMode | null) ?? "hospitality";
+
   if (settings.booking_mode === "external") {
     return {
       business,
       settings,
       services: [],
+      dashboardMode,
     };
   }
 
@@ -60,5 +78,6 @@ export async function getPublicBookingPage(
     business,
     settings,
     services: services ?? [],
+    dashboardMode,
   };
 }

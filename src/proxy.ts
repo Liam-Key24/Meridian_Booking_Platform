@@ -60,7 +60,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (request.nextUrl.pathname === "/login" && user) {
+  if (
+    (request.nextUrl.pathname === "/login" ||
+      request.nextUrl.pathname === "/login/forgot-password") &&
+    user
+  ) {
     const [{ data: profile }, { count: membershipCount }] = await Promise.all([
       supabase
         .from("profiles")
@@ -82,9 +86,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(destination, request.nextUrl.origin));
   }
 
+  if (
+    request.nextUrl.pathname === "/login/update-password" &&
+    !user
+  ) {
+    return NextResponse.redirect(
+      new URL("/login/forgot-password", request.nextUrl.origin),
+    );
+  }
+
   return response;
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/login",
+    "/login/:path*",
+  ],
 };

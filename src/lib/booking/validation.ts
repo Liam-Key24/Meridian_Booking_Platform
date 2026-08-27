@@ -22,11 +22,20 @@ export type ValidatedBookingRequest = {
   customerName: string;
   customerEmail: string;
   customerPhone: string | null;
-  serviceId: string;
+  serviceId: string | null;
   preferredDate: string;
   preferredTime: string;
   guestCount: number | null;
   notes: string | null;
+};
+
+export type ValidateBookingOptions = {
+  /** Default true (appointments). Hospitality public form may omit service. */
+  requireService?: boolean;
+  /** Hospitality: require a party size. */
+  requireGuestCount?: boolean;
+  /** Cap from booking_settings.max_party_size when set. */
+  maxGuestCount?: number | null;
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,7 +44,12 @@ const TIME_RE = /^\d{2}:\d{2}$/;
 
 export function validateBookingRequest(
   input: BookingRequestInput,
+  options: ValidateBookingOptions = {},
 ): ValidationResult {
+  const requireService = options.requireService ?? true;
+  const requireGuestCount = options.requireGuestCount ?? false;
+  const maxGuestCount = options.maxGuestCount ?? null;
+
   if (input.companyWebsite.trim() !== "") {
     return { ok: false, error: "Unable to submit this request." };
   }
@@ -55,7 +69,8 @@ export function validateBookingRequest(
     return { ok: false, error: "Please enter a valid phone number." };
   }
 
-  if (!input.serviceId.trim()) {
+  const serviceId = input.serviceId.trim();
+  if (requireService && !serviceId) {
     return { ok: false, error: "Please select a service." };
   }
 
@@ -78,10 +93,19 @@ export function validateBookingRequest(
   const guestsRaw = input.guestCount.trim();
   if (guestsRaw) {
     const parsed = Number.parseInt(guestsRaw, 10);
-    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 100) {
-      return { ok: false, error: "Guest count must be between 1 and 100." };
+    const upper = maxGuestCount && maxGuestCount > 0 ? maxGuestCount : 100;
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > upper) {
+      return {
+        ok: false,
+        error:
+          maxGuestCount && maxGuestCount > 0
+            ? `Party size must be between 1 and ${maxGuestCount}.`
+            : "Guest count must be between 1 and 100.",
+      };
     }
     guestCount = parsed;
+  } else if (requireGuestCount) {
+    return { ok: false, error: "Please enter your party size." };
   }
 
   const notes = input.notes.trim();
@@ -103,7 +127,7 @@ export function validateBookingRequest(
       customerName,
       customerEmail,
       customerPhone: customerPhone || null,
-      serviceId: input.serviceId.trim(),
+      serviceId: serviceId || null,
       preferredDate: input.preferredDate,
       preferredTime: input.preferredTime,
       guestCount,
