@@ -27,6 +27,16 @@ export async function assignBusinessTemplate(
 
   const supabase = await createClient();
 
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id, slug, dashboard_mode")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  if (!business) {
+    return { status: "error", message: "Business not found." };
+  }
+
   if (!templateId) {
     const { error } = await supabase
       .from("business_template_assignments")
@@ -36,12 +46,13 @@ export async function assignBusinessTemplate(
       return { status: "error", message: "Could not clear template assignment." };
     }
     revalidatePath(`/admin/businesses/${businessId}`);
+    revalidatePath(`/preview/${business.slug}`);
     return { status: "success", message: "Template assignment cleared." };
   }
 
   const { data: template } = await supabase
     .from("site_templates")
-    .select("id, status")
+    .select("id, status, dashboard_mode")
     .eq("id", templateId)
     .maybeSingle();
 
@@ -49,6 +60,17 @@ export async function assignBusinessTemplate(
     return {
       status: "error",
       message: "Only active templates can be assigned for preview/publishing.",
+    };
+  }
+
+  if (
+    template.dashboard_mode &&
+    template.dashboard_mode !== business.dashboard_mode
+  ) {
+    return {
+      status: "error",
+      message:
+        "Template dashboard mode must match the business mode before assignment.",
     };
   }
 
@@ -68,5 +90,6 @@ export async function assignBusinessTemplate(
   }
 
   revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/preview/${business.slug}`);
   return { status: "success", message: "Template assigned." };
 }

@@ -133,6 +133,7 @@ export default async function AdminBusinessDetailPage({ params }: PageProps) {
       .from("site_templates")
       .select("id, name, slug")
       .eq("status", "active")
+      .eq("dashboard_mode", dashboardMode)
       .order("name"),
     getAdminBusinessOpsMetrics(id),
     listBusinessAuditHistory(id, 25),
