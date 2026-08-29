@@ -349,6 +349,7 @@ export type Database = {
           notes: string | null;
           status: BookingStatus;
           assigned_staff_user_id: string | null;
+          assigned_staff_id: string | null;
           suggested_date: string | null;
           suggested_time: string | null;
           privacy_consent_at: string | null;
@@ -372,6 +373,7 @@ export type Database = {
           notes?: string | null;
           status?: BookingStatus;
           assigned_staff_user_id?: string | null;
+          assigned_staff_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
@@ -395,6 +397,7 @@ export type Database = {
           notes?: string | null;
           status?: BookingStatus;
           assigned_staff_user_id?: string | null;
+          assigned_staff_id?: string | null;
           suggested_date?: string | null;
           suggested_time?: string | null;
           privacy_consent_at?: string | null;
@@ -416,6 +419,51 @@ export type Database = {
             columns: ["service_id"];
             isOneToOne: false;
             referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "bookings_assigned_staff_id_fkey";
+            columns: ["assigned_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "business_staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      business_staff: {
+        Row: {
+          id: string;
+          business_id: string;
+          display_name: string;
+          active: boolean;
+          weekly_availability: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          display_name: string;
+          active?: boolean;
+          weekly_availability?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          display_name?: string;
+          active?: boolean;
+          weekly_availability?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "business_staff_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: false;
+            referencedRelation: "businesses";
             referencedColumns: ["id"];
           },
         ];
