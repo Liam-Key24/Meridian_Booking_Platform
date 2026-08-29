@@ -20,6 +20,8 @@ type BookingRequestFormProps = {
   businessName: string;
   services: ServiceOption[];
   turnstileSiteKey?: string | null;
+  submitLabel?: string;
+  embed?: boolean;
 };
 
 const initialState: SubmitBookingState = {
@@ -39,6 +41,8 @@ export function BookingRequestForm({
   businessName,
   services,
   turnstileSiteKey,
+  submitLabel = "Submit request",
+  embed = false,
 }: BookingRequestFormProps) {
   const [state, formAction, pending] = useActionState(
     submitBookingRequest,
@@ -183,8 +187,8 @@ export function BookingRequestForm({
           </p>
         ) : null}
 
-        <Button type="submit" fullWidth disabled={pending}>
-          {pending ? "Sending request…" : "Submit request"}
+        <Button type="submit" fullWidth disabled={pending} className={embed ? "rounded-full" : undefined}>
+          {pending ? "Sending request…" : submitLabel}
         </Button>
       </form>
     </>
