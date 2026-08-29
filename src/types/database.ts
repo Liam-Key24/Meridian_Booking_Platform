@@ -619,6 +619,8 @@ export type Database = {
           template_id: string;
           assigned_at: string;
           assigned_by: string | null;
+          last_synced_at: string | null;
+          sync_version: number;
         };
         Insert: {
           id?: string;
@@ -626,6 +628,8 @@ export type Database = {
           template_id: string;
           assigned_at?: string;
           assigned_by?: string | null;
+          last_synced_at?: string | null;
+          sync_version?: number;
         };
         Update: {
           id?: string;
@@ -633,6 +637,8 @@ export type Database = {
           template_id?: string;
           assigned_at?: string;
           assigned_by?: string | null;
+          last_synced_at?: string | null;
+          sync_version?: number;
         };
         Relationships: [
           {
@@ -654,6 +660,68 @@ export type Database = {
             columns: ["assigned_by"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      client_site_settings: {
+        Row: {
+          id: string;
+          business_id: string;
+          primary_color: string;
+          accent_color: string;
+          background_color: string;
+          text_color: string;
+          logo_path: string | null;
+          hero_image_path: string | null;
+          gallery_paths: string[];
+          menu_json: Json;
+          template_config_version: number;
+          template_synced_at: string | null;
+          template_sync_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          business_id: string;
+          primary_color?: string;
+          accent_color?: string;
+          background_color?: string;
+          text_color?: string;
+          logo_path?: string | null;
+          hero_image_path?: string | null;
+          gallery_paths?: string[];
+          menu_json?: Json;
+          template_config_version?: number;
+          template_synced_at?: string | null;
+          template_sync_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          business_id?: string;
+          primary_color?: string;
+          accent_color?: string;
+          background_color?: string;
+          text_color?: string;
+          logo_path?: string | null;
+          hero_image_path?: string | null;
+          gallery_paths?: string[];
+          menu_json?: Json;
+          template_config_version?: number;
+          template_synced_at?: string | null;
+          template_sync_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_site_settings_business_id_fkey";
+            columns: ["business_id"];
+            isOneToOne: true;
+            referencedRelation: "businesses";
             referencedColumns: ["id"];
           },
         ];

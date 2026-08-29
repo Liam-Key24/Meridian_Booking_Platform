@@ -27,6 +27,14 @@ import {
   resetCapabilitiesToModeDefaults,
   seedDefaultCapabilities,
 } from "@/lib/business/capabilities-server";
+import {
+  customTablesFromForm,
+  holidaysFromForm,
+  kitchenCloseFromForm,
+  parseNonNegativeInt,
+  parseOptionalPositiveInt,
+  weeklyHoursFromForm,
+} from "@/lib/dashboard/hospitality-settings";
 
 export type AdminActionState = {
   status: "idle" | "success" | "error";
@@ -148,6 +156,18 @@ export async function createBusiness(
     };
   }
 
+  const { error: siteSettingsError } = await supabase
+    .from("client_site_settings")
+    .insert({ business_id: business.id });
+
+  if (siteSettingsError) {
+    console.error("[admin] create site settings", siteSettingsError);
+    return {
+      status: "error",
+      message: "Business created but site settings failed.",
+    };
+  }
+
   const seed = await seedDefaultCapabilities({
     businessId: business.id,
     mode: dashboardMode,
@@ -172,7 +192,7 @@ export async function createBusiness(
   });
 
   revalidatePath("/admin");
-  redirect(`/admin/businesses/${business.id}`);
+  redirect(`/admin/businesses/${business.id}/settings/details`);
 }
 
 export async function updateBusinessStatus(
@@ -681,5 +701,236 @@ export async function upsertAdminService(
   }
 
   revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/services`);
+  await revalidatePublicBookPath(businessId);
   return { status: "success", message: "Service saved." };
+}
+
+function revalidateBusinessSettings(businessId: string, slug?: string) {
+  revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/admin/businesses/${businessId}/settings`);
+  if (slug) {
+    revalidatePath(`/admin/businesses/${businessId}/settings/${slug}`);
+  }
+}
+
+export async function updateBusinessDetails(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const notificationEmail = String(
+    formData.get("notificationEmail") ?? "",
+  ).trim();
+  const contactPhone =
+    String(formData.get("contactPhone") ?? "").trim() || null;
+  const timezone = String(formData.get("timezone") ?? "").trim();
+
+  if (name.length < 2 || name.length > 120) {
+    return { status: "error", message: "Enter a valid business name." };
+  }
+  if (!EMAIL_RE.test(notificationEmail)) {
+    return { status: "error", message: "Enter a valid notification email." };
+  }
+  if (!TIMEZONE_RE.test(timezone)) {
+    return { status: "error", message: "Enter a valid IANA timezone." };
+  }
+
+  const supabase = await createClient();
+  const { error: businessError } = await supabase
+    .from("businesses")
+    .update({ name })
+    .eq("id", businessId);
+
+  if (businessError) {
+    return { status: "error", message: "Could not update business name." };
+  }
+
+  const { error: settingsError } = await supabase
+    .from("booking_settings")
+    .update({
+      notification_email: notificationEmail,
+      contact_phone: contactPhone,
+      timezone,
+    })
+    .eq("business_id", businessId);
+
+  if (settingsError) {
+    return { status: "error", message: "Could not update contact details." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.business.update_details",
+    entityType: "business",
+    entityId: businessId,
+    metadata: { name, timezone },
+  });
+
+  revalidateBusinessSettings(businessId, "details");
+  revalidatePath("/admin");
+  await revalidatePublicBookPath(businessId);
+  return { status: "success", message: "Details saved." };
+}
+
+export async function updateAdminHospitalityHours(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const kitchenCloseEnabled = formData.get("kitchenCloseEnabled") === "on";
+  const barHoursEnabled = formData.get("barHoursEnabled") === "on";
+  const openingHours = weeklyHoursFromForm(formData, "opening");
+  const barOpeningHours = weeklyHoursFromForm(formData, "bar");
+  const kitchenCloseTimes = kitchenCloseFromForm(formData);
+  const holidays = holidaysFromForm(formData);
+
+  if (!openingHours) {
+    return {
+      status: "error",
+      message: "Check opening hours — open must be before close.",
+    };
+  }
+  if (!barOpeningHours) {
+    return {
+      status: "error",
+      message: "Check bar hours — open must be before close.",
+    };
+  }
+  if (!kitchenCloseTimes) {
+    return { status: "error", message: "Check kitchen close times." };
+  }
+  if (!holidays) {
+    return { status: "error", message: "Check holiday dates (YYYY-MM-DD)." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("booking_settings")
+    .update({
+      opening_hours: openingHours as unknown as Json,
+      kitchen_close_enabled: kitchenCloseEnabled,
+      kitchen_close_times: kitchenCloseTimes as unknown as Json,
+      bar_hours_enabled: barHoursEnabled,
+      bar_opening_hours: barOpeningHours as unknown as Json,
+      holidays: holidays as unknown as Json,
+    })
+    .eq("business_id", businessId);
+
+  if (error) {
+    return { status: "error", message: "Could not save hours." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.settings.update_hours",
+    entityType: "booking_settings",
+    entityId: businessId,
+  });
+
+  revalidateBusinessSettings(businessId, "hours");
+  await revalidatePublicBookPath(businessId);
+  return { status: "success", message: "Hours saved." };
+}
+
+export async function updateAdminHospitalityTables(
+  _prev: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const tables2 = parseNonNegativeInt(formData.get("tables2Seat"), 0);
+  const tables4 = parseNonNegativeInt(formData.get("tables4Seat"), 0);
+  const tables6 = parseNonNegativeInt(formData.get("tables6Seat"), 0);
+  const maxBookings = parseOptionalPositiveInt(
+    formData.get("maxBookingsPerDay"),
+  );
+  const maxParty = parseOptionalPositiveInt(formData.get("maxPartySize"));
+  const slotMinutes = Number.parseInt(
+    String(formData.get("bookingSlotMinutes") ?? "30"),
+    10,
+  );
+  const customTables = customTablesFromForm(formData);
+
+  if (
+    Number.isNaN(tables2) ||
+    Number.isNaN(tables4) ||
+    Number.isNaN(tables6)
+  ) {
+    return { status: "error", message: "Table counts must be whole numbers." };
+  }
+  if (Number.isNaN(maxBookings as number)) {
+    return { status: "error", message: "Max bookings per day is invalid." };
+  }
+  if (Number.isNaN(maxParty as number)) {
+    return { status: "error", message: "Max party size is invalid." };
+  }
+  if (![15, 30, 60].includes(slotMinutes)) {
+    return { status: "error", message: "Slot minutes must be 15, 30, or 60." };
+  }
+  if (!customTables) {
+    return {
+      status: "error",
+      message: "Custom tables need a label and seats (1–100).",
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("booking_settings")
+    .update({
+      tables_2_seat: tables2,
+      tables_4_seat: tables4,
+      tables_6_seat: tables6,
+      custom_tables: customTables as unknown as Json,
+      max_bookings_per_day: maxBookings,
+      max_party_size: maxParty,
+      booking_slot_minutes: slotMinutes,
+    })
+    .eq("business_id", businessId);
+
+  if (error) {
+    return { status: "error", message: "Could not save tables settings." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.settings.update_tables",
+    entityType: "booking_settings",
+    entityId: businessId,
+  });
+
+  revalidateBusinessSettings(businessId, "tables");
+  await revalidatePublicBookPath(businessId);
+  return { status: "success", message: "Tables saved." };
+}
+
+async function revalidatePublicBookPath(businessId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("businesses")
+    .select("slug")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (data?.slug) {
+    revalidatePath(`/book/${data.slug}`);
+  }
 }
