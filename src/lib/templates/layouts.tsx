@@ -14,6 +14,10 @@ export const TEMPLATE_LAYOUTS: Record<
   "hospitality-classic": HospitalityClassicLayout,
 };
 
+export const AVAILABLE_TEMPLATE_LAYOUT_SLUGS = new Set(
+  Object.keys(TEMPLATE_LAYOUTS),
+);
+
 export function resolveClientSiteLayout(slug: string) {
   return TEMPLATE_LAYOUTS[slug] ?? null;
 }

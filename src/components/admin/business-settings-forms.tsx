@@ -14,12 +14,15 @@ import {
   updateBusinessMenuPdfs,
   type SiteSettingsActionState,
 } from "@/lib/admin/site-settings-actions";
+import { ColorCirclePicker } from "@/components/admin/color-circle-picker";
+import { TemplateBrandingPreview } from "@/components/admin/template-branding-preview";
 import {
   DEFAULT_BRAND_COLORS,
   publicAssetUrl,
   type BusinessMenuPdfs,
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
+import type { TemplateBrandingPreset } from "@/lib/templates/catalog";
 import {
   syncBusinessTemplateAction,
   type TemplateSyncState,
@@ -476,28 +479,6 @@ export function AdminHospitalityTablesForm({
   );
 }
 
-function ColorSwatch({
-  label,
-  name,
-  defaultValue,
-}: {
-  label: string;
-  name: string;
-  defaultValue: string;
-}) {
-  return (
-    <div>
-      <label className="text-sm font-medium text-meridian-text">{label}</label>
-      <input
-        type="color"
-        name={name}
-        defaultValue={defaultValue}
-        className="mt-2 block size-11 cursor-pointer rounded-meridian-sm border border-meridian-border"
-      />
-    </div>
-  );
-}
-
 export function AdminBrandingForm({
   businessId,
   primaryColor,
@@ -507,6 +488,8 @@ export function AdminBrandingForm({
   logoPath,
   heroImagePath,
   galleryPaths,
+  assignedTemplateName,
+  assignedTemplateBranding,
 }: {
   businessId: string;
   primaryColor: string;
@@ -516,6 +499,8 @@ export function AdminBrandingForm({
   logoPath: string | null;
   heroImagePath: string | null;
   galleryPaths: string[];
+  assignedTemplateName?: string | null;
+  assignedTemplateBranding?: TemplateBrandingPreset | null;
 }) {
   const [state, action, pending] = useActionState(
     updateBusinessBranding,
@@ -530,24 +515,34 @@ export function AdminBrandingForm({
   return (
     <form action={action} className="space-y-6" encType="multipart/form-data">
       <input type="hidden" name="businessId" value={businessId} />
-      <div className="grid gap-4 sm:grid-cols-2">
-        <ColorSwatch
-          label="Primary colour"
+      {assignedTemplateName && assignedTemplateBranding ? (
+        <div className="rounded-meridian border border-meridian-border bg-meridian-surface-subtle px-4 py-3">
+          <p className="text-sm font-medium text-meridian-text">
+            {assignedTemplateName} defaults
+          </p>
+          <div className="mt-2">
+            <TemplateBrandingPreview branding={assignedTemplateBranding} />
+          </div>
+        </div>
+      ) : null}
+      <div className="flex flex-wrap gap-6">
+        <ColorCirclePicker
+          label="Primary"
           name="primaryColor"
           defaultValue={primaryColor}
         />
-        <ColorSwatch
-          label="Accent colour"
+        <ColorCirclePicker
+          label="Accent"
           name="accentColor"
           defaultValue={accentColor}
         />
-        <ColorSwatch
-          label="Background colour"
+        <ColorCirclePicker
+          label="Background"
           name="backgroundColor"
           defaultValue={backgroundColor}
         />
-        <ColorSwatch
-          label="Text colour"
+        <ColorCirclePicker
+          label="Text"
           name="textColor"
           defaultValue={textColor}
         />
@@ -808,8 +803,8 @@ export function AdminTemplateSyncForm({
         <Feedback state={state} />
       </form>
       <p className="text-sm text-meridian-text-muted">
-        Pushes branding and menus to the assigned template snapshot. Future
-        template layouts will read from site settings automatically.
+        Pushes the latest branding, menus, booking, hours, and contact settings
+        into the assigned template snapshot.
       </p>
     </div>
   );

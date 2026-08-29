@@ -39,12 +39,12 @@ export default async function ClientMenuPage({ params }: PageProps) {
     );
   }
 
-  const { business, branding, booking } = payload;
+  const { business, branding, booking, template } = payload;
 
   return (
     <div
-      className="min-h-full bg-[var(--client-background)] font-sans text-[var(--client-text)]"
-      style={brandingCssVariables(branding) as React.CSSProperties}
+      className="min-h-full bg-[var(--client-background)] text-[var(--client-text)] [font-family:var(--client-font-body)] [&_h1]:[font-family:var(--client-font-heading)]"
+      style={brandingCssVariables(branding, template.slug) as React.CSSProperties}
     >
       <header className="border-b border-[color-mix(in_srgb,var(--client-text)_8%,transparent)]">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-[var(--meridian-space-page)] py-5">

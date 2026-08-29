@@ -4,6 +4,7 @@ import { AdminTemplateSyncForm } from "@/components/admin/business-settings-form
 import { SettingsPanel } from "@/components/admin/settings-panel";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
 import type { DashboardMode } from "@/lib/business/modes";
+import { enrichTemplateForAdmin } from "@/lib/templates/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -36,9 +37,10 @@ export default async function BusinessTemplateSettingsPage({ params }: PageProps
       .maybeSingle(),
     supabase
       .from("site_templates")
-      .select("id, name, slug")
-      .eq("status", "active")
+      .select("id, name, slug, status, description, allowed_sections, dashboard_mode")
       .eq("dashboard_mode", dashboardMode)
+      .neq("status", "retired")
+      .order("status")
       .order("name"),
     supabase
       .from("client_site_settings")
@@ -49,16 +51,20 @@ export default async function BusinessTemplateSettingsPage({ params }: PageProps
       .maybeSingle(),
   ]);
 
+  const templateOptions = (templates ?? []).map((template) =>
+    enrichTemplateForAdmin(template),
+  );
+
   return (
     <SettingsPanel
       title="Template"
-      description="Assign a Meridian template and push branding/menus when layouts are ready."
+      description="Choose a layout, then branding, menus, booking, and contact settings publish into the preview automatically."
     >
       <AdminTemplateAssignForm
         businessId={business.id}
         businessSlug={business.slug}
         assignedTemplateId={assignment?.template_id ?? null}
-        templates={templates ?? []}
+        templates={templateOptions}
       />
       <AdminTemplateSyncForm
         businessId={business.id}

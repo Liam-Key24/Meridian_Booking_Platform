@@ -14,10 +14,12 @@ import {
   upsertAdminService,
   type AdminActionState,
 } from "@/lib/admin/actions";
+import { TemplatePickerList } from "@/components/admin/template-picker-list";
 import {
   assignBusinessTemplate,
   type TemplateAssignState,
 } from "@/lib/templates/actions";
+import type { AdminTemplateOption } from "@/lib/templates/catalog";
 import {
   BUSINESS_TYPES,
   BUSINESS_TYPE_LABELS,
@@ -511,44 +513,22 @@ export function AdminTemplateAssignForm({
   businessId: string;
   businessSlug: string;
   assignedTemplateId: string | null;
-  templates: Array<{ id: string; name: string; slug: string }>;
+  templates: AdminTemplateOption[];
 }) {
   const [state, action, pending] = useActionState(
     assignBusinessTemplate,
     templateAssignInitial,
   );
   return (
-    <form action={action} className="space-y-4">
-      <input type="hidden" name="businessId" value={businessId} />
-      <Select
-        label="Assigned template"
-        name="templateId"
-        defaultValue={assignedTemplateId ?? ""}
-        options={[
-          { value: "", label: "None (no preview/publish)" },
-          ...templates.map((template) => ({
-            value: template.id,
-            label: `${template.name} (${template.slug})`,
-          })),
-        ]}
-      />
-      <p className="text-sm text-meridian-text-muted">
-        Only active templates matching this business dashboard mode are listed.
-        Configure branding and menus under Settings before syncing the template.{" "}
-        Preview requires an assigned active template.{" "}
-        <a
-          href={`/preview/${businessSlug}`}
-          className="font-semibold text-meridian-teal hover:underline"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open preview
-        </a>
-      </p>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save template assignment"}
-      </Button>
-    </form>
+    <TemplatePickerList
+      businessId={businessId}
+      templates={templates}
+      assignedTemplateId={assignedTemplateId}
+      businessSlug={businessSlug}
+      formAction={action}
+      pending={pending}
+      stateMessage={state.message}
+      stateStatus={state.status}
+    />
   );
 }

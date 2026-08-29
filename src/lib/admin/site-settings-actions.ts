@@ -275,6 +275,7 @@ export async function updateBusinessBranding(
 
   const message = await syncSettingsToTemplate(businessId, "Branding saved.");
   revalidateSettings(businessId);
+  await revalidatePublishedClientSitePaths(businessId);
 
   return {
     status: "success",

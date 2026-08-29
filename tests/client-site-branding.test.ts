@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  brandingCssVariables,
   brandingFromSiteSettings,
   defaultClientSiteBranding,
 } from "@/lib/templates/branding";
@@ -69,5 +70,15 @@ describe("client site branding", () => {
     expect(defaultClientSiteBranding().config_version).toBe(0);
     expect(brandingFromSiteSettings(null).menu.sections).toEqual([]);
     expect(brandingFromSiteSettings(null).menu_pdfs).toEqual([]);
+  });
+
+  it("maps branding and template fonts to CSS variables", () => {
+    const branding = defaultClientSiteBranding();
+    branding.primary_color = "#112233";
+
+    const vars = brandingCssVariables(branding, "hospitality-classic");
+    expect(vars["--client-primary"]).toBe("#112233");
+    expect(vars["--client-font-heading"]).toContain("Georgia");
+    expect(vars["--client-font-body"]).toContain("system-ui");
   });
 });

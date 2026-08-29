@@ -1,5 +1,6 @@
 import { HospitalityBookingSection } from "@/components/client-site/hospitality-booking-section";
 import { brandingCssVariables } from "@/lib/templates/branding";
+import { hasTemplateSection } from "@/lib/templates/catalog";
 import type { ClientSiteLayoutProps } from "@/lib/templates/layouts";
 
 const PLACEHOLDER_GALLERY = [
@@ -56,17 +57,28 @@ function SiteHeader({
   businessName,
   logoUrl,
   menuHref,
+  showMenu,
+  showGallery,
+  showBooking,
+  showContact,
+  showHero,
 }: {
   businessName: string;
   logoUrl: string | null;
   menuHref: string;
+  showMenu: boolean;
+  showGallery: boolean;
+  showBooking: boolean;
+  showContact: boolean;
+  showHero: boolean;
 }) {
   const links = [
-    { href: "#about", label: "About" },
-    { href: menuHref, label: "Menu" },
-    { href: "#gallery", label: "Gallery" },
-    { href: "#contact", label: "Contact" },
-  ];
+    { href: "#about", label: "About", show: showHero },
+    { href: menuHref, label: "Menu", show: showMenu },
+    { href: "#gallery", label: "Gallery", show: showGallery },
+    { href: "#book", label: "Reservations", show: showBooking },
+    { href: "#contact", label: "Contact", show: showContact },
+  ].filter((link) => link.show);
 
   return (
     <header className="border-b border-[color-mix(in_srgb,var(--client-text)_8%,transparent)]">
@@ -138,6 +150,12 @@ export function HospitalityClassicLayout({
   const menuHref = `/menu/${business.slug}`;
   const heroImage = branding.hero_image_url;
   const gallery = branding.gallery_urls;
+  const sections = template.allowed_sections;
+  const showHero = hasTemplateSection(sections, "hero");
+  const showMenu = hasTemplateSection(sections, "menu");
+  const showGallery = hasTemplateSection(sections, "gallery");
+  const showBooking = hasTemplateSection(sections, "booking_widget");
+  const showContact = hasTemplateSection(sections, "contact");
   const heroCopy =
     template.description ??
     "Experience culinary excellence in an intimate setting, where every dish tells a story of locally-sourced ingredients and masterful technique.";
@@ -145,8 +163,8 @@ export function HospitalityClassicLayout({
   return (
     <div
       id="top"
-      className="min-h-full bg-[var(--client-background)] font-sans text-[var(--client-text)]"
-      style={brandingCssVariables(branding) as React.CSSProperties}
+      style={brandingCssVariables(branding, template.slug) as React.CSSProperties}
+      className="min-h-full bg-[var(--client-background)] text-[var(--client-text)] [font-family:var(--client-font-body)] [&_h1]:[font-family:var(--client-font-heading)] [&_h2]:[font-family:var(--client-font-heading)] [&_blockquote]:[font-family:var(--client-font-heading)]"
     >
       {preview ? (
         <div className="border-b border-meridian-border bg-meridian-surface px-[var(--meridian-space-page)] py-2 text-center text-xs text-meridian-text-muted">
@@ -158,9 +176,16 @@ export function HospitalityClassicLayout({
         businessName={business.name}
         logoUrl={branding.logo_url}
         menuHref={menuHref}
+        showMenu={showMenu}
+        showGallery={showGallery}
+        showBooking={showBooking}
+        showContact={showContact}
+        showHero={showHero}
       />
 
       <main>
+        {showHero ? (
+        <>
         {/* Hero */}
         <section className="mx-auto grid max-w-6xl gap-10 px-[var(--meridian-space-page)] py-16 lg:grid-cols-2 lg:items-center lg:py-24">
           <div className="space-y-8">
@@ -173,12 +198,16 @@ export function HospitalityClassicLayout({
               </p>
             </div>
             <div className="flex flex-wrap gap-4">
-              <ClassicButton href="#book" variant="primary">
-                Reserve Your Table
-              </ClassicButton>
-              <ClassicButton href={menuHref} variant="secondary">
-                View Menu
-              </ClassicButton>
+              {showBooking ? (
+                <ClassicButton href="#book" variant="primary">
+                  Reserve Your Table
+                </ClassicButton>
+              ) : null}
+              {showMenu ? (
+                <ClassicButton href={menuHref} variant="secondary">
+                  View Menu
+                </ClassicButton>
+              ) : null}
             </div>
           </div>
           <div className="overflow-hidden rounded-3xl bg-[color-mix(in_srgb,var(--client-primary)_12%,var(--client-background))]">
@@ -233,7 +262,11 @@ export function HospitalityClassicLayout({
             </p>
           </div>
         </section>
+        </>
+        ) : null}
 
+        {showGallery ? (
+        <>
         {/* Gallery */}
         <section
           id="gallery"
@@ -291,16 +324,19 @@ export function HospitalityClassicLayout({
             />
           </div>
         </section>
+        </>
+        ) : null}
 
-        {/* Booking */}
-        <HospitalityBookingSection
-          businessName={business.name}
-          businessSlug={business.slug}
-          booking={booking}
-          turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
-        />
+        {showBooking ? (
+          <HospitalityBookingSection
+            businessName={business.name}
+            businessSlug={business.slug}
+            booking={booking}
+            turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
+          />
+        ) : null}
 
-        {/* Testimonials */}
+        {showHero ? (
         <section className="bg-[color-mix(in_srgb,var(--client-text)_4%,var(--client-background))] py-16">
           <div className="mx-auto max-w-6xl px-[var(--meridian-space-page)]">
             <h2 className="mb-10 text-center font-serif text-3xl tracking-tight sm:text-4xl">
@@ -323,9 +359,10 @@ export function HospitalityClassicLayout({
             </div>
           </div>
         </section>
+        ) : null}
       </main>
 
-      {/* Footer */}
+      {showContact ? (
       <footer
         id="contact"
         className="scroll-mt-8 bg-[var(--client-text)] text-[var(--client-background)]"
@@ -408,10 +445,11 @@ export function HospitalityClassicLayout({
             <p>
               © {new Date().getFullYear()} {business.name}. Powered by Meridian.
             </p>
-            <p>Preview template: Hospitality Classic</p>
+            <p>Preview template: {template.name}</p>
           </div>
         </div>
       </footer>
+      ) : null}
     </div>
   );
 }

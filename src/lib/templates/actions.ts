@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
 import {
+  siteSettingsUseDefaultColors,
+  templateBrandingPresetForSlug,
+} from "@/lib/templates/catalog";
+import {
   revalidatePublishedClientSitePaths,
   syncSettingsToTemplate,
 } from "@/lib/templates/sync";
@@ -51,13 +55,13 @@ export async function assignBusinessTemplate(
     }
     revalidatePath(`/admin/businesses/${businessId}`);
     revalidatePath(`/admin/businesses/${businessId}/settings/template`);
-    revalidatePath(`/preview/${business.slug}`);
+    await revalidatePublishedClientSitePaths(businessId);
     return { status: "success", message: "Template assignment cleared." };
   }
 
   const { data: template } = await supabase
     .from("site_templates")
-    .select("id, status, dashboard_mode")
+    .select("id, status, dashboard_mode, slug")
     .eq("id", templateId)
     .maybeSingle();
 
@@ -94,7 +98,32 @@ export async function assignBusinessTemplate(
     return { status: "error", message: "Could not assign template." };
   }
 
+  await supabase.from("client_site_settings").upsert(
+    { business_id: businessId },
+    { onConflict: "business_id", ignoreDuplicates: true },
+  );
+
+  const { data: siteSettings } = await supabase
+    .from("client_site_settings")
+    .select("primary_color, accent_color, background_color, text_color")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (siteSettings && siteSettingsUseDefaultColors(siteSettings)) {
+    const preset = templateBrandingPresetForSlug(template.slug);
+    await supabase
+      .from("client_site_settings")
+      .update({
+        primary_color: preset.primary,
+        accent_color: preset.accent,
+        background_color: preset.background,
+        text_color: preset.text,
+      })
+      .eq("business_id", businessId);
+  }
+
   revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/branding`);
   revalidatePath(`/admin/businesses/${businessId}/settings/template`);
   await revalidatePublishedClientSitePaths(businessId);
   const message = await syncSettingsToTemplate(

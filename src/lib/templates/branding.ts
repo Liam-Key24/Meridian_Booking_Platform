@@ -5,6 +5,7 @@ import {
   parseMenuPdfs,
   publicAssetUrl,
 } from "@/lib/admin/site-settings";
+import { templateBrandingPresetForSlug } from "@/lib/templates/catalog";
 import type { Tables } from "@/types/database";
 
 export type ClientSiteMenuPdf = MenuPdfDocument & {
@@ -82,11 +83,18 @@ export function brandingFromSiteSettings(
 
 export function brandingCssVariables(
   branding: ClientSiteBranding,
+  templateSlug?: string,
 ): Record<string, string> {
+  const fonts = templateSlug
+    ? templateBrandingPresetForSlug(templateSlug)
+    : null;
+
   return {
     "--client-primary": branding.primary_color,
     "--client-accent": branding.accent_color,
     "--client-background": branding.background_color,
     "--client-text": branding.text_color,
+    "--client-font-heading": fonts?.headingFont ?? "Georgia, serif",
+    "--client-font-body": fonts?.bodyFont ?? "system-ui, sans-serif",
   };
 }

@@ -1,10 +1,9 @@
 import { notFound } from "next/navigation";
 import { AdminBrandingForm } from "@/components/admin/business-settings-forms";
 import { SettingsPanel } from "@/components/admin/settings-panel";
-import {
-  DEFAULT_BRAND_COLORS,
-} from "@/lib/admin/site-settings";
+import { DEFAULT_BRAND_COLORS } from "@/lib/admin/site-settings";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import { templateBrandingPresetForSlug } from "@/lib/templates/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -38,6 +37,20 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
     siteSettings = created;
   }
 
+  const { data: assignment } = await supabase
+    .from("business_template_assignments")
+    .select("template_id")
+    .eq("business_id", id)
+    .maybeSingle();
+
+  const { data: assignedTemplate } = assignment
+    ? await supabase
+        .from("site_templates")
+        .select("name, slug")
+        .eq("id", assignment.template_id)
+        .maybeSingle()
+    : { data: null };
+
   return (
     <SettingsPanel
       title="Branding"
@@ -54,6 +67,12 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
         logoPath={siteSettings?.logo_path ?? null}
         heroImagePath={siteSettings?.hero_image_path ?? null}
         galleryPaths={siteSettings?.gallery_paths ?? []}
+        assignedTemplateName={assignedTemplate?.name ?? null}
+        assignedTemplateBranding={
+          assignedTemplate
+            ? templateBrandingPresetForSlug(assignedTemplate.slug)
+            : null
+        }
       />
     </SettingsPanel>
   );
