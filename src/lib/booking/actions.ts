@@ -1,7 +1,9 @@
 "use server";
 
 import { headers } from "next/headers";
+import { normalizeAllergies } from "@/lib/allergies";
 import { sendBookingRequestEmails } from "@/lib/booking/emails";
+import { isPreferredSlotOpen } from "@/lib/booking/opening-hours";
 import { getPublicBookingPage } from "@/lib/booking/public-page";
 import {
   buildEmailRateLimitKey,
@@ -51,6 +53,8 @@ export async function submitBookingRequest(
     preferredTime: String(formData.get("preferredTime") ?? ""),
     guestCount: String(formData.get("guestCount") ?? ""),
     notes: String(formData.get("notes") ?? ""),
+    allergies: String(formData.get("allergies") ?? ""),
+    noAllergies: formData.get("noAllergies") === "on",
     privacyConsent: formData.get("privacyConsent") === "on",
     companyWebsite: String(formData.get("companyWebsite") ?? ""),
   };
@@ -60,18 +64,30 @@ export async function submitBookingRequest(
     return { status: "success", message: SUCCESS_MESSAGE };
   }
 
-  const validated = validateBookingRequest(input);
-  if (!validated.ok) {
-    return { status: "error", message: validated.error };
-  }
-
   if (!idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 128) {
     return { status: "error", message: "Unable to submit this request." };
   }
 
+  const pageEarly = await getPublicBookingPage(
+    String(formData.get("businessSlug") ?? "").trim().toLowerCase(),
+  );
+  if (!pageEarly) {
+    return { status: "error", message: "This business is not accepting requests." };
+  }
+
+  const isHospitality = pageEarly.dashboardMode === "hospitality";
+  const validated = validateBookingRequest(input, {
+    requireService: !isHospitality,
+    requireGuestCount: isHospitality,
+    maxGuestCount: pageEarly.settings.max_party_size,
+    requireAllergyDeclaration: isHospitality,
+  });
+  if (!validated.ok) {
+    return { status: "error", message: validated.error };
+  }
+
   const headerStore = await headers();
   const { ip } = getTrustedClientIp(headerStore);
-  // Stable bucket when IP is unavailable — still scoped by business via key builders
   const rateLimitIp = ip ?? "unresolved";
 
   const turnstile = await verifyTurnstileToken(
@@ -89,7 +105,6 @@ export async function submitBookingRequest(
     return { status: "error", message: turnstile.error };
   }
 
-  // Production requires HMAC secret before building Redis keys
   if (!getRateLimitHmacSecret()) {
     logServerEvent({
       event: "booking.public.submit",
@@ -152,14 +167,10 @@ export async function submitBookingRequest(
     };
   }
 
-  const page = await getPublicBookingPage(validated.data.businessSlug);
-  if (!page) {
-    return { status: "error", message: "This business is not accepting requests." };
-  }
-
+  const page = pageEarly;
   if (
     page.settings.booking_mode === "external" ||
-    page.services.length === 0
+    (!isHospitality && page.services.length === 0)
   ) {
     return {
       status: "error",
@@ -167,16 +178,32 @@ export async function submitBookingRequest(
     };
   }
 
-  const service = page.services.find(
-    (item) => item.id === validated.data.serviceId,
-  );
-  if (!service) {
+  const slot = isPreferredSlotOpen({
+    preferredDate: validated.data.preferredDate,
+    preferredTime: validated.data.preferredTime,
+    openingHours: page.settings.opening_hours,
+    holidays: page.settings.holidays,
+  });
+  if (!slot.ok) {
+    return { status: "error", message: slot.error };
+  }
+
+  let serviceId: string | null = null;
+  if (validated.data.serviceId) {
+    const service = page.services.find(
+      (item) => item.id === validated.data.serviceId,
+    );
+    if (!service) {
+      return { status: "error", message: "Please select a valid service." };
+    }
+    serviceId = service.id;
+  } else if (!isHospitality) {
     return { status: "error", message: "Please select a valid service." };
   }
 
+  const allergies = normalizeAllergies(validated.data.allergies);
   const supabase = createServiceRoleClient();
 
-  // Idempotent replay: same key for this business returns existing success
   const { data: existing } = await supabase
     .from("bookings")
     .select("id")
@@ -200,7 +227,7 @@ export async function submitBookingRequest(
     .from("bookings")
     .insert({
       business_id: page.business.id,
-      service_id: service.id,
+      service_id: serviceId,
       customer_name: validated.data.customerName,
       customer_email: validated.data.customerEmail,
       customer_phone: validated.data.customerPhone,
@@ -208,6 +235,7 @@ export async function submitBookingRequest(
       preferred_time: validated.data.preferredTime,
       guest_count: validated.data.guestCount,
       notes: validated.data.notes,
+      allergies,
       status: "pending",
       privacy_consent_at: new Date().toISOString(),
       idempotency_key: idempotencyKey,
@@ -216,7 +244,6 @@ export async function submitBookingRequest(
     .single();
 
   if (bookingError) {
-    // Unique race on idempotency key — treat as success
     if (bookingError.code === "23505") {
       logServerEvent({
         event: "booking.public.submit",
@@ -255,10 +282,9 @@ export async function submitBookingRequest(
     event_type: "booking.created",
     payload: {
       source: "public_form",
-      service_id: service.id,
+      service_id: serviceId,
       preferred_date: validated.data.preferredDate,
       preferred_time: validated.data.preferredTime,
-      // Do not include customer notes/allergies/PII in event payloads
     },
   });
 
@@ -274,6 +300,9 @@ export async function submitBookingRequest(
   }
 
   try {
+    const serviceName =
+      page.services.find((item) => item.id === serviceId)?.name ??
+      (isHospitality ? "Table reservation" : "Booking request");
     await sendBookingRequestEmails({
       businessId: page.business.id,
       bookingId: booking.id,
@@ -282,7 +311,7 @@ export async function submitBookingRequest(
       customerName: validated.data.customerName,
       customerEmail: validated.data.customerEmail,
       customerPhone: validated.data.customerPhone,
-      serviceName: service.name,
+      serviceName,
       preferredDate: validated.data.preferredDate,
       preferredTime: validated.data.preferredTime,
       guestCount: validated.data.guestCount,

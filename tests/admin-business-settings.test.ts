@@ -5,7 +5,7 @@ import {
   filterBusinessSettingsNav,
   isSettingsSlugForMode,
 } from "@/lib/admin/business-settings-nav";
-import { parseBusinessMenu } from "@/lib/admin/site-settings";
+import { parseBusinessMenu, parseMenuPdfs } from "@/lib/admin/site-settings";
 
 describe("business settings nav", () => {
   it("shows hospitality hours, tables, and menus", () => {
@@ -94,5 +94,36 @@ describe("parseBusinessMenu", () => {
     expect(menu.sections).toHaveLength(1);
     expect(menu.sections[0]?.title).toBe("Mains");
     expect(menu.sections[0]?.items[0]?.name).toBe("Fish");
+  });
+});
+
+describe("parseMenuPdfs", () => {
+  it("normalises menu pdf documents", () => {
+    const pdfs = parseMenuPdfs({
+      documents: [
+        {
+          id: "p1",
+          title: " Lunch ",
+          path: "biz/menu.pdf",
+          visible: true,
+        },
+        { id: "p2", title: "Skip", path: "", visible: true },
+      ],
+    });
+    expect(pdfs.documents).toHaveLength(1);
+    expect(pdfs.documents[0]?.title).toBe("Lunch");
+    expect(pdfs.documents[0]?.path).toBe("biz/menu.pdf");
+  });
+
+  it("adds menu_pdfs_json migration for client site settings", () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260829180001_client_site_menu_pdfs.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("menu_pdfs_json");
+    expect(sql).toContain("application/pdf");
   });
 });

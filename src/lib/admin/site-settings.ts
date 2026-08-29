@@ -26,6 +26,20 @@ export type BusinessMenu = {
   sections: MenuSection[];
 };
 
+export type MenuPdfDocument = {
+  id: string;
+  title: string;
+  path: string;
+  visible: boolean;
+};
+
+export type BusinessMenuPdfs = {
+  documents: MenuPdfDocument[];
+};
+
+export const MAX_MENU_PDF_BYTES = 15 * 1024 * 1024;
+export const MENU_PDF_MIME = "application/pdf";
+
 export const DEFAULT_BRAND_COLORS = {
   primary_color: "#0F766E",
   accent_color: "#0D9488",
@@ -37,6 +51,10 @@ export const BUSINESS_ASSETS_BUCKET = "business-assets";
 
 export function emptyMenu(): BusinessMenu {
   return { sections: [] };
+}
+
+export function emptyMenuPdfs(): BusinessMenuPdfs {
+  return { documents: [] };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,6 +95,33 @@ export function parseBusinessMenu(value: unknown): BusinessMenu {
 
 export function menuToJson(menu: BusinessMenu): Json {
   return menu as unknown as Json;
+}
+
+export function parseMenuPdfs(value: unknown): BusinessMenuPdfs {
+  if (!isRecord(value) || !Array.isArray(value.documents)) {
+    return emptyMenuPdfs();
+  }
+
+  const documents: MenuPdfDocument[] = [];
+  for (const raw of value.documents) {
+    if (!isRecord(raw)) continue;
+    const path = typeof raw.path === "string" ? raw.path : "";
+    if (!path) continue;
+    documents.push({
+      id: typeof raw.id === "string" ? raw.id : crypto.randomUUID(),
+      title:
+        typeof raw.title === "string" && raw.title.trim()
+          ? raw.title.trim()
+          : "Menu",
+      path,
+      visible: raw.visible !== false,
+    });
+  }
+  return { documents };
+}
+
+export function menuPdfsToJson(pdfs: BusinessMenuPdfs): Json {
+  return pdfs as unknown as Json;
 }
 
 export function isValidHexColor(value: string): boolean {

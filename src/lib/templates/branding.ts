@@ -1,10 +1,15 @@
-import type { BusinessMenu } from "@/lib/admin/site-settings";
+import type { BusinessMenu, MenuPdfDocument } from "@/lib/admin/site-settings";
 import {
   DEFAULT_BRAND_COLORS,
   parseBusinessMenu,
+  parseMenuPdfs,
   publicAssetUrl,
 } from "@/lib/admin/site-settings";
 import type { Tables } from "@/types/database";
+
+export type ClientSiteMenuPdf = MenuPdfDocument & {
+  url: string;
+};
 
 export type ClientSiteBranding = {
   primary_color: string;
@@ -15,6 +20,7 @@ export type ClientSiteBranding = {
   hero_image_url: string | null;
   gallery_urls: string[];
   menu: BusinessMenu;
+  menu_pdfs: ClientSiteMenuPdf[];
   config_version: number;
 };
 
@@ -28,6 +34,7 @@ type SiteSettingsRow = Pick<
   | "hero_image_path"
   | "gallery_paths"
   | "menu_json"
+  | "menu_pdfs_json"
   | "template_config_version"
 >;
 
@@ -41,6 +48,7 @@ export function defaultClientSiteBranding(): ClientSiteBranding {
     hero_image_url: null,
     gallery_urls: [],
     menu: { sections: [] },
+    menu_pdfs: [],
     config_version: 0,
   };
 }
@@ -61,6 +69,13 @@ export function brandingFromSiteSettings(
       .map((path) => publicAssetUrl(path))
       .filter((url): url is string => Boolean(url)),
     menu: parseBusinessMenu(row.menu_json),
+    menu_pdfs: parseMenuPdfs(row.menu_pdfs_json).documents
+      .filter((doc) => doc.visible)
+      .map((doc) => {
+        const url = publicAssetUrl(doc.path);
+        return url ? { ...doc, url } : null;
+      })
+      .filter((doc): doc is ClientSiteMenuPdf => doc !== null),
     config_version: row.template_config_version,
   };
 }

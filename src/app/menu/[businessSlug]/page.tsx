@@ -1,4 +1,6 @@
 import { EmptyState, ErrorState } from "@/components/ui";
+import { HospitalityBookingSection } from "@/components/client-site/hospitality-booking-section";
+import { MenuPdfViewer } from "@/components/client-site/menu-pdf-viewer";
 import { brandingCssVariables } from "@/lib/templates/branding";
 import { getClientSitePagePayload } from "@/lib/templates/payload";
 
@@ -37,10 +39,7 @@ export default async function ClientMenuPage({ params }: PageProps) {
     );
   }
 
-  const { business, branding } = payload;
-  const visibleSections = branding.menu.sections.filter(
-    (section) => section.visible && section.items.length > 0,
-  );
+  const { business, branding, booking } = payload;
 
   return (
     <div
@@ -56,7 +55,7 @@ export default async function ClientMenuPage({ params }: PageProps) {
             {business.name}
           </a>
           <a
-            href={`/preview/${business.slug}#book`}
+            href="#book"
             className="text-sm text-[color-mix(in_srgb,var(--client-text)_72%,transparent)] hover:text-[var(--client-text)]"
           >
             Reserve a table
@@ -69,48 +68,29 @@ export default async function ClientMenuPage({ params }: PageProps) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--client-accent)]">
             Dining
           </p>
-          <h1 className="font-serif text-4xl tracking-tight">Our Menu</h1>
+          <h1 className="font-serif text-4xl tracking-tight">Our Menus</h1>
+          <p className="text-sm text-[color-mix(in_srgb,var(--client-text)_60%,transparent)]">
+            Select a menu to view, zoom, and read.
+          </p>
         </div>
 
-        {visibleSections.length === 0 ? (
+        {branding.menu_pdfs.length === 0 ? (
           <EmptyState
-            title="Menu coming soon"
-            description="Menu sections will appear here once configured in Admin → Settings → Menus."
+            title="Menus coming soon"
+            description="Upload menu PDFs in Admin → Settings → Menus."
           />
         ) : (
-          <div className="space-y-12">
-            {visibleSections.map((section) => (
-              <section key={section.id} className="space-y-5">
-                <h2 className="font-serif text-2xl tracking-tight">
-                  {section.title}
-                </h2>
-                <ul className="divide-y divide-[color-mix(in_srgb,var(--client-text)_10%,transparent)]">
-                  {section.items.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-col gap-2 py-4 sm:flex-row sm:items-start sm:justify-between"
-                    >
-                      <div className="space-y-1">
-                        <p className="font-medium">{item.name}</p>
-                        {item.description ? (
-                          <p className="text-sm text-[color-mix(in_srgb,var(--client-text)_68%,transparent)]">
-                            {item.description}
-                          </p>
-                        ) : null}
-                      </div>
-                      {item.price ? (
-                        <p className="shrink-0 text-sm font-semibold text-[var(--client-primary)]">
-                          {item.price}
-                        </p>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
+          <MenuPdfViewer documents={branding.menu_pdfs} />
         )}
       </main>
+
+      <HospitalityBookingSection
+        businessName={business.name}
+        businessSlug={business.slug}
+        booking={booking}
+        turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
+        className="mx-auto max-w-3xl scroll-mt-8 border-t border-[color-mix(in_srgb,var(--client-text)_8%,transparent)] px-[var(--meridian-space-page)] py-16"
+      />
     </div>
   );
 }

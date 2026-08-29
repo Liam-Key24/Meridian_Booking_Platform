@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useState } from "react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import {
   updateAdminHospitalityHours,
@@ -11,15 +11,14 @@ import {
 } from "@/lib/admin/actions";
 import {
   updateBusinessBranding,
-  updateBusinessMenus,
+  updateBusinessMenuPdfs,
   type SiteSettingsActionState,
 } from "@/lib/admin/site-settings-actions";
 import {
   DEFAULT_BRAND_COLORS,
   publicAssetUrl,
-  type BusinessMenu,
-  type MenuItem,
-  type MenuSection,
+  type BusinessMenuPdfs,
+  type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
 import {
   syncBusinessTemplateAction,
@@ -646,58 +645,52 @@ export function AdminBrandingForm({
   );
 }
 
-function newMenuItem(): MenuItem {
-  return {
-    id: crypto.randomUUID(),
-    name: "",
-    description: "",
-    price: "",
-    dietary: [],
-  };
-}
-
-function newMenuSection(): MenuSection {
+function newMenuPdfRow(): MenuPdfDocument {
   return {
     id: crypto.randomUUID(),
     title: "",
+    path: "",
     visible: true,
-    items: [newMenuItem()],
   };
 }
 
-export function AdminMenusForm({
+export function AdminMenuPdfsForm({
   businessId,
-  menu,
+  menuPdfs,
 }: {
   businessId: string;
-  menu: BusinessMenu;
+  menuPdfs: BusinessMenuPdfs;
 }) {
   const [state, action, pending] = useActionState(
-    updateBusinessMenus,
+    updateBusinessMenuPdfs,
     siteInitial,
   );
-  const [sections, setSections] = useState<MenuSection[]>(
-    menu.sections.length > 0 ? menu.sections : [newMenuSection()],
+  const [documents, setDocuments] = useState<MenuPdfDocument[]>(
+    menuPdfs.documents.length > 0 ? menuPdfs.documents : [newMenuPdfRow()],
   );
-  const menuJson = useMemo(() => JSON.stringify({ sections }), [sections]);
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={action} encType="multipart/form-data" className="space-y-6">
       <input type="hidden" name="businessId" value={businessId} />
-      <input type="hidden" name="menuJson" value={menuJson} readOnly />
-      {sections.map((section, sectionIndex) => (
+      {documents.map((doc) => (
         <div
-          key={section.id}
+          key={doc.id}
           className="space-y-4 rounded-meridian border border-meridian-border p-4"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <input type="hidden" name="pdfIds" value={doc.id} />
+          {doc.path ? (
+            <input type="hidden" name={`path-${doc.id}`} value={doc.path} />
+          ) : null}
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <Input
-              label="Section title"
-              value={section.title}
+              label="Menu title"
+              name={`title-${doc.id}`}
+              defaultValue={doc.title}
+              placeholder="Lunch menu"
               onChange={(event) =>
-                setSections((rows) =>
-                  rows.map((row, i) =>
-                    i === sectionIndex
+                setDocuments((rows) =>
+                  rows.map((row) =>
+                    row.id === doc.id
                       ? { ...row, title: event.target.value }
                       : row,
                   ),
@@ -705,149 +698,69 @@ export function AdminMenusForm({
               }
             />
             <OnOffToggle
-              name={`section-visible-${section.id}`}
-              label="Visible"
-              checked={section.visible}
+              name={`visible-${doc.id}`}
+              label="Visible on menu page"
+              checked={doc.visible}
               onChange={(visible) =>
-                setSections((rows) =>
-                  rows.map((row, i) =>
-                    i === sectionIndex ? { ...row, visible } : row,
+                setDocuments((rows) =>
+                  rows.map((row) =>
+                    row.id === doc.id ? { ...row, visible } : row,
                   ),
                 )
               }
             />
           </div>
-          {section.items.map((item, itemIndex) => (
-            <div
-              key={item.id}
-              className="grid gap-3 border-t border-meridian-border pt-4 sm:grid-cols-2"
-            >
-              <Input
-                label="Item name"
-                value={item.name}
-                onChange={(event) =>
-                  setSections((rows) =>
-                    rows.map((row, si) =>
-                      si === sectionIndex
-                        ? {
-                            ...row,
-                            items: row.items.map((it, ii) =>
-                              ii === itemIndex
-                                ? { ...it, name: event.target.value }
-                                : it,
-                            ),
-                          }
-                        : row,
-                    ),
-                  )
-                }
-              />
-              <Input
-                label="Price"
-                value={item.price}
-                placeholder="£12.50"
-                onChange={(event) =>
-                  setSections((rows) =>
-                    rows.map((row, si) =>
-                      si === sectionIndex
-                        ? {
-                            ...row,
-                            items: row.items.map((it, ii) =>
-                              ii === itemIndex
-                                ? { ...it, price: event.target.value }
-                                : it,
-                            ),
-                          }
-                        : row,
-                    ),
-                  )
-                }
-              />
-              <div className="sm:col-span-2">
-                <Textarea
-                  label="Description"
-                  rows={2}
-                  value={item.description}
-                  onChange={(event) =>
-                    setSections((rows) =>
-                      rows.map((row, si) =>
-                        si === sectionIndex
-                          ? {
-                              ...row,
-                              items: row.items.map((it, ii) =>
-                                ii === itemIndex
-                                  ? { ...it, description: event.target.value }
-                                  : it,
-                              ),
-                            }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() =>
-                  setSections((rows) =>
-                    rows.map((row, si) =>
-                      si === sectionIndex
-                        ? {
-                            ...row,
-                            items: row.items.filter((_, ii) => ii !== itemIndex),
-                          }
-                        : row,
-                    ),
-                  )
-                }
-              >
-                Remove item
-              </Button>
-            </div>
-          ))}
+          {doc.path ? (
+            <p className="text-sm text-meridian-text-muted">
+              Current file: <code>{doc.path.split("/").pop()}</code>
+            </p>
+          ) : null}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-meridian-text">
+              {doc.path ? "Replace PDF" : "Upload PDF"}
+            </label>
+            <input
+              type="file"
+              name={`file-${doc.id}`}
+              accept="application/pdf"
+              className="block w-full text-sm text-meridian-text-muted file:mr-4 file:rounded-full file:border-0 file:bg-meridian-surface-subtle file:px-4 file:py-2 file:text-sm file:font-medium file:text-meridian-text"
+            />
+          </div>
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={() =>
-              setSections((rows) =>
-                rows.map((row, i) =>
-                  i === sectionIndex
-                    ? { ...row, items: [...row.items, newMenuItem()] }
-                    : row,
-                ),
-              )
+              setDocuments((rows) => rows.filter((row) => row.id !== doc.id))
             }
           >
-            Add item
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              setSections((rows) => rows.filter((_, i) => i !== sectionIndex))
-            }
-          >
-            Remove section
+            Remove menu
           </Button>
         </div>
       ))}
       <Button
         type="button"
         variant="secondary"
-        onClick={() => setSections((rows) => [...rows, newMenuSection()])}
+        onClick={() => setDocuments((rows) => [...rows, newMenuPdfRow()])}
       >
-        Add section
+        Add menu PDF
       </Button>
       <Feedback state={state} />
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save menus"}
+        {pending ? "Saving…" : "Save menu PDFs"}
       </Button>
     </form>
   );
+}
+
+export function AdminMenusForm({
+  businessId,
+  menuPdfs,
+}: {
+  businessId: string;
+  menuPdfs: BusinessMenuPdfs;
+}) {
+  return <AdminMenuPdfsForm businessId={businessId} menuPdfs={menuPdfs} />;
 }
 
 export function AdminTemplateSyncForm({

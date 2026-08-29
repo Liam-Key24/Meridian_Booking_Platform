@@ -1,4 +1,4 @@
-import { BookingWidget } from "@/components/booking/booking-widget";
+import { HospitalityBookingSection } from "@/components/client-site/hospitality-booking-section";
 import { brandingCssVariables } from "@/lib/templates/branding";
 import type { ClientSiteLayoutProps } from "@/lib/templates/layouts";
 
@@ -293,35 +293,12 @@ export function HospitalityClassicLayout({
         </section>
 
         {/* Booking */}
-        <section
-          id="book"
-          className="mx-auto max-w-3xl scroll-mt-8 px-[var(--meridian-space-page)] py-16"
-        >
-          <div className="mb-8 space-y-3 text-center">
-            <h2 className="font-serif text-3xl tracking-tight sm:text-4xl">
-              Reserve Your Table
-            </h2>
-            <p className="text-sm text-[color-mix(in_srgb,var(--client-text)_60%,transparent)]">
-              Select your preferred date and time. We look forward to welcoming
-              you.
-            </p>
-          </div>
-          <div className="rounded-3xl border border-[color-mix(in_srgb,var(--client-text)_8%,transparent)] bg-[var(--client-background)] p-6 shadow-[0_20px_60px_color-mix(in_srgb,var(--client-text)_8%,transparent)] sm:p-8">
-            <BookingWidget
-              businessName={business.name}
-              businessSlug={business.slug}
-              bookingMode={booking.settings.booking_mode}
-              externalBookingUrl={booking.settings.external_booking_url}
-              services={booking.services}
-              turnstileSiteKey={
-                process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null
-              }
-              embed
-              submitLabel="Find a Table"
-              className="[&_button]:rounded-full [&_button]:bg-[var(--client-text)] [&_button]:text-[var(--client-background)]"
-            />
-          </div>
-        </section>
+        <HospitalityBookingSection
+          businessName={business.name}
+          businessSlug={business.slug}
+          booking={booking}
+          turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
+        />
 
         {/* Testimonials */}
         <section className="bg-[color-mix(in_srgb,var(--client-text)_4%,var(--client-background))] py-16">

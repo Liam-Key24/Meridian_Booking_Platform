@@ -35,12 +35,30 @@ describe("client site branding", () => {
           },
         ],
       },
+      menu_pdfs_json: {
+        documents: [
+          {
+            id: "pdf1",
+            title: "Lunch",
+            path: "biz/lunch.pdf",
+            visible: true,
+          },
+          {
+            id: "pdf2",
+            title: "Hidden dinner",
+            path: "biz/dinner.pdf",
+            visible: false,
+          },
+        ],
+      },
       template_config_version: 3,
     });
 
     expect(branding.primary_color).toBe("#112233");
     expect(branding.config_version).toBe(3);
     expect(branding.menu.sections).toHaveLength(1);
+    expect(branding.menu_pdfs).toHaveLength(1);
+    expect(branding.menu_pdfs[0]?.title).toBe("Lunch");
     expect(branding.logo_url).toContain("biz/logo.png");
     expect(branding.gallery_urls).toHaveLength(2);
 
@@ -50,5 +68,6 @@ describe("client site branding", () => {
   it("falls back to defaults when settings are missing", () => {
     expect(defaultClientSiteBranding().config_version).toBe(0);
     expect(brandingFromSiteSettings(null).menu.sections).toEqual([]);
+    expect(brandingFromSiteSettings(null).menu_pdfs).toEqual([]);
   });
 });

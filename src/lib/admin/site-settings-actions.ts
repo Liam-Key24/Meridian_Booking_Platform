@@ -5,9 +5,15 @@ import { getAuthSnapshot } from "@/lib/auth/business-context";
 import {
   BUSINESS_ASSETS_BUCKET,
   isValidHexColor,
+  MAX_MENU_PDF_BYTES,
+  MENU_PDF_MIME,
+  menuPdfsToJson,
   menuToJson,
   parseBusinessMenu,
+  parseMenuPdfs,
   type BusinessMenu,
+  type BusinessMenuPdfs,
+  type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
 import { maybeSyncBusinessTemplate } from "@/lib/templates/sync";
 import { createClient } from "@/lib/supabase/server";
@@ -83,6 +89,20 @@ function revalidateSettings(businessId: string) {
   }
 }
 
+async function revalidateClientSitePages(businessId: string) {
+  revalidateSettings(businessId);
+  const supabase = await createClient();
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("slug")
+    .eq("id", businessId)
+    .maybeSingle();
+  if (business?.slug) {
+    revalidatePath(`/preview/${business.slug}`);
+    revalidatePath(`/menu/${business.slug}`);
+  }
+}
+
 async function uploadBusinessAsset(
   businessId: string,
   file: File,
@@ -119,6 +139,35 @@ async function uploadBusinessAsset(
     console.error("[admin] asset upload", error);
     return { error: "Could not upload image." };
   }
+  return { path: objectPath };
+}
+
+async function uploadMenuPdf(
+  businessId: string,
+  file: File,
+): Promise<{ path: string } | { error: string }> {
+  if (file.type !== MENU_PDF_MIME) {
+    return { error: "Upload PDF files only." };
+  }
+  if (file.size > MAX_MENU_PDF_BYTES) {
+    return { error: "Menu PDF must be 15MB or smaller." };
+  }
+
+  const objectPath = `${businessId}/menus/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.pdf`;
+  const supabase = await createClient();
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { error } = await supabase.storage
+    .from(BUSINESS_ASSETS_BUCKET)
+    .upload(objectPath, buffer, {
+      contentType: MENU_PDF_MIME,
+      upsert: false,
+    });
+
+  if (error) {
+    console.error("[admin] menu pdf upload", error);
+    return { error: "Could not upload menu PDF." };
+  }
+
   return { path: objectPath };
 }
 
@@ -297,10 +346,91 @@ export async function updateBusinessMenus(
   });
 
   const sync = await maybeSyncBusinessTemplate(businessId);
-  revalidateSettings(businessId);
+  await revalidateClientSitePages(businessId);
 
   return {
     status: "success",
     message: sync.message ?? "Menus saved.",
+  };
+}
+
+export async function updateBusinessMenuPdfs(
+  _prev: SiteSettingsActionState,
+  formData: FormData,
+): Promise<SiteSettingsActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const pdfIds = formData.getAll("pdfIds").map(String).filter(Boolean);
+
+  if (!businessId) {
+    return { status: "error", message: "Missing business." };
+  }
+
+  const documents: MenuPdfDocument[] = [];
+
+  for (const id of pdfIds) {
+    const title = String(formData.get(`title-${id}`) ?? "").trim();
+    const visible = formData.get(`visible-${id}`) === "on";
+    const existingPath = String(formData.get(`path-${id}`) ?? "").trim();
+    const file = formData.get(`file-${id}`);
+
+    if (!title) {
+      return { status: "error", message: "Each menu PDF needs a title." };
+    }
+
+    let path = existingPath;
+    if (file instanceof File && file.size > 0) {
+      const uploaded = await uploadMenuPdf(businessId, file);
+      if ("error" in uploaded) {
+        return { status: "error", message: uploaded.error };
+      }
+      path = uploaded.path;
+    }
+
+    if (!path) {
+      return {
+        status: "error",
+        message: `Upload a PDF for "${title}".`,
+      };
+    }
+
+    documents.push({ id, title, path, visible });
+  }
+
+  const ensured = await ensureSiteSettings(businessId);
+  if (!ensured.ok) {
+    return { status: "error", message: "Could not create site settings." };
+  }
+
+  const pdfs: BusinessMenuPdfs = { documents };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("client_site_settings")
+    .update({ menu_pdfs_json: menuPdfsToJson(pdfs) })
+    .eq("business_id", businessId);
+
+  if (error) {
+    return { status: "error", message: "Could not save menu PDFs." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.site_settings.update_menu_pdfs",
+    entityType: "client_site_settings",
+    entityId: businessId,
+    metadata: { documents: documents.length },
+  });
+
+  const sync = await maybeSyncBusinessTemplate(businessId);
+  await revalidateClientSitePages(businessId);
+
+  return {
+    status: "success",
+    message: sync.message ?? "Menu PDFs saved.",
   };
 }
