@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { HospitalityClassicLayout } from "@/components/client-site/layouts/hospitality-classic";
 import { TemplatePendingShell } from "@/components/client-site/template-pending-shell";
 import {
   CLIENT_SITE_TEMPLATE_SLUGS,
@@ -11,16 +12,23 @@ export type ClientSiteLayoutProps = {
   preview?: boolean;
 };
 
+const PENDING_LAYOUTS = CLIENT_SITE_TEMPLATE_SLUGS.filter(
+  (slug) => slug !== "hospitality-classic",
+);
+
 /**
- * Slug → layout component. All entries use TemplatePendingShell until
- * real layouts land (see docs/client-site-templates.md).
+ * Slug → layout component. Replace pending entries one commit at a time
+ * (see docs/client-site-templates.md).
  */
 export const TEMPLATE_LAYOUTS: Record<
   ClientSiteTemplateSlug,
   ComponentType<ClientSiteLayoutProps>
-> = Object.fromEntries(
-  CLIENT_SITE_TEMPLATE_SLUGS.map((slug) => [slug, TemplatePendingShell]),
-) as Record<ClientSiteTemplateSlug, ComponentType<ClientSiteLayoutProps>>;
+> = {
+  "hospitality-classic": HospitalityClassicLayout,
+  ...Object.fromEntries(
+    PENDING_LAYOUTS.map((slug) => [slug, TemplatePendingShell]),
+  ),
+} as Record<ClientSiteTemplateSlug, ComponentType<ClientSiteLayoutProps>>;
 
 export function resolveClientSiteLayout(slug: string) {
   if (!(slug in TEMPLATE_LAYOUTS)) return null;

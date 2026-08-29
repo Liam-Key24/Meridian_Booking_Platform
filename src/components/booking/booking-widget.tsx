@@ -16,6 +16,8 @@ export type BookingWidgetProps = {
   externalBookingUrl: string | null;
   services: BookingWidgetService[];
   turnstileSiteKey?: string | null;
+  /** Hide template-level chrome when embedded inside a client-site layout. */
+  embed?: boolean;
   /** Optional className for embed layouts on Meridian client sites. */
   className?: string;
 };
@@ -31,6 +33,7 @@ export function BookingWidget({
   externalBookingUrl,
   services,
   turnstileSiteKey,
+  embed = false,
   className,
 }: BookingWidgetProps) {
   if (bookingMode === "external") {
@@ -49,19 +52,21 @@ export function BookingWidget({
   return (
     <div className={className}>
       <div className="space-y-8">
-        <header className="space-y-3">
-          <Badge tone="soft">
-            {bookingMode === "hybrid" ? "Hybrid booking" : "Public booking"}
-          </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
-            {businessName}
-          </h1>
-          <p className="text-meridian-text-muted">
-            {bookingMode === "hybrid"
-              ? "Request a time through Meridian, or continue with the business’s existing booking provider."
-              : "Submit a request. This does not confirm your booking."}
-          </p>
-        </header>
+        {embed ? null : (
+          <header className="space-y-3">
+            <Badge tone="soft">
+              {bookingMode === "hybrid" ? "Hybrid booking" : "Public booking"}
+            </Badge>
+            <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
+              {businessName}
+            </h1>
+            <p className="text-meridian-text-muted">
+              {bookingMode === "hybrid"
+                ? "Request a time through Meridian, or continue with the business’s existing booking provider."
+                : "Submit a request. This does not confirm your booking."}
+            </p>
+          </header>
+        )}
 
         {showExternal ? (
           <Card

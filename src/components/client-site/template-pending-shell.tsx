@@ -1,19 +1,24 @@
 import { Badge } from "@/components/ui";
 import { brandingCssVariables } from "@/lib/templates/branding";
-import type { ClientSitePagePayload } from "@/lib/templates/payload";
 import { renderClientSiteSections } from "@/lib/templates/render-sections";
+import type { ClientSitePagePayload } from "@/lib/templates/payload";
 
 type ClientSiteShellProps = {
   payload: ClientSitePagePayload;
   preview?: boolean;
+  width?: "default" | "wide";
   children: React.ReactNode;
 };
 
 export function ClientSiteShell({
   payload,
   preview = false,
+  width = "default",
   children,
 }: ClientSiteShellProps) {
+  const maxWidth =
+    width === "wide" ? "max-w-6xl" : "max-w-4xl";
+
   return (
     <div
       className="min-h-full bg-[var(--client-background)] text-[var(--client-text)]"
@@ -24,7 +29,9 @@ export function ClientSiteShell({
           <Badge tone="soft">Template preview — not published</Badge>
         </div>
       ) : null}
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-[var(--meridian-space-page)] py-10">
+      <div
+        className={`mx-auto flex w-full ${maxWidth} flex-col px-[var(--meridian-space-page)] py-10`}
+      >
         {children}
       </div>
     </div>
@@ -63,7 +70,9 @@ export function TemplatePendingShell({
           </p>
         ) : null}
       </header>
-      <div className="flex flex-col gap-6">{renderClientSiteSections(payload)}</div>
+      <div className="mt-8 flex flex-col gap-6">
+        {renderClientSiteSections(payload)}
+      </div>
     </ClientSiteShell>
   );
 }

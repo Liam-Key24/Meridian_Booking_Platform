@@ -10,6 +10,25 @@ export const DEFAULT_CLIENT_SITE_BRANDING = {
   text_color: "#0F172A",
 } as const;
 
+export type ClientSiteMenuItem = {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  dietary: string[];
+};
+
+export type ClientSiteMenuSection = {
+  id: string;
+  title: string;
+  visible: boolean;
+  items: ClientSiteMenuItem[];
+};
+
+export type ClientSiteMenu = {
+  sections: ClientSiteMenuSection[];
+};
+
 export type ClientSiteBranding = {
   primary_color: string;
   accent_color: string;
@@ -18,8 +37,13 @@ export type ClientSiteBranding = {
   logo_url: string | null;
   hero_image_url: string | null;
   gallery_urls: string[];
+  menu: ClientSiteMenu;
   config_version: number;
 };
+
+export function emptyClientSiteMenu(): ClientSiteMenu {
+  return { sections: [] };
+}
 
 export function defaultClientSiteBranding(): ClientSiteBranding {
   return {
@@ -27,6 +51,7 @@ export function defaultClientSiteBranding(): ClientSiteBranding {
     logo_url: null,
     hero_image_url: null,
     gallery_urls: [],
+    menu: emptyClientSiteMenu(),
     config_version: 0,
   };
 }

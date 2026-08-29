@@ -44,6 +44,12 @@ describe("client-site layout registry", () => {
       expect(TEMPLATE_LAYOUTS[slug]).toBeDefined();
     }
   });
+
+  it("uses the real layout for hospitality-classic", () => {
+    expect(TEMPLATE_LAYOUTS["hospitality-classic"].name).toBe(
+      "HospitalityClassicLayout",
+    );
+  });
 });
 
 describe("client-site sections", () => {
