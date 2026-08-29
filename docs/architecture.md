@@ -33,7 +33,7 @@ services
 bookings
 booking_events
 business_settings
-client_site_settings
+client_site_settings  — per-business branding, menus, media (see migration 20260827073737)
 payment_accounts
 payments
 refunds

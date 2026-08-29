@@ -54,6 +54,9 @@ function isActive(pathname: string, href: string): boolean {
 
 function pageTitleForPath(pathname: string): string {
   if (pathname.startsWith("/admin/businesses/new")) return "New business";
+  if (pathname.startsWith("/admin/businesses/") && pathname.includes("/settings")) {
+    return "Business settings";
+  }
   if (pathname.startsWith("/admin/businesses/")) return "Business detail";
   if (pathname.startsWith("/admin/bookings")) return "Bookings list";
   if (pathname.startsWith("/admin/audit-logs")) return "Audit logs";

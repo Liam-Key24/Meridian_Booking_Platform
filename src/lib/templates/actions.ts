@@ -36,6 +36,7 @@ export async function assignBusinessTemplate(
       return { status: "error", message: "Could not clear template assignment." };
     }
     revalidatePath(`/admin/businesses/${businessId}`);
+    revalidatePath(`/admin/businesses/${businessId}/settings/template`);
     return { status: "success", message: "Template assignment cleared." };
   }
 
@@ -68,5 +69,6 @@ export async function assignBusinessTemplate(
   }
 
   revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/template`);
   return { status: "success", message: "Template assigned." };
 }
