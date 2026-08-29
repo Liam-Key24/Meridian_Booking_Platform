@@ -51,6 +51,34 @@ describe("client site settings migration", () => {
   });
 });
 
+describe("site templates dashboard_mode migration", () => {
+  it("adds mode-aware templates and retires legacy seeds", () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260829170001_site_templates_dashboard_mode.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("dashboard_mode");
+    expect(sql).toContain("hospitality-classic");
+    expect(sql).toContain("appointments-studio");
+    expect(sql).toContain("'retired'");
+  });
+
+  it("activates hospitality-classic for assignment", () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260829171001_activate_hospitality_classic.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("hospitality-classic");
+    expect(sql).toContain("'active'");
+  });
+});
+
 describe("parseBusinessMenu", () => {
   it("normalises menu sections and items", () => {
     const menu = parseBusinessMenu({

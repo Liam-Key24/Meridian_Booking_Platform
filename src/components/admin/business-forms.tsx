@@ -533,6 +533,8 @@ export function AdminTemplateAssignForm({
         ]}
       />
       <p className="text-sm text-meridian-text-muted">
+        Only active templates matching this business dashboard mode are listed.
+        Configure branding and menus under Settings before syncing the template.{" "}
         Preview requires an assigned active template.{" "}
         <a
           href={`/preview/${businessSlug}`}

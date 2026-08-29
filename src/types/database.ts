@@ -585,6 +585,7 @@ export type Database = {
           name: string;
           slug: string;
           status: TemplateStatus;
+          dashboard_mode: DashboardMode | null;
           allowed_sections: Json;
           description: string | null;
           created_at: string;
@@ -595,6 +596,7 @@ export type Database = {
           name: string;
           slug: string;
           status?: TemplateStatus;
+          dashboard_mode?: DashboardMode | null;
           allowed_sections?: Json;
           description?: string | null;
           created_at?: string;
@@ -605,6 +607,7 @@ export type Database = {
           name?: string;
           slug?: string;
           status?: TemplateStatus;
+          dashboard_mode?: DashboardMode | null;
           allowed_sections?: Json;
           description?: string | null;
           created_at?: string;

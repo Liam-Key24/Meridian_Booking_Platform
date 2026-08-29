@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+import {
+  brandingFromSiteSettings,
+  defaultClientSiteBranding,
+} from "@/lib/templates/branding";
+
+describe("client site branding", () => {
+  it("maps admin site settings into template branding", () => {
+    const previous = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+
+    const branding = brandingFromSiteSettings({
+      primary_color: "#112233",
+      accent_color: "#445566",
+      background_color: "#FFFFFF",
+      text_color: "#000000",
+      logo_path: "biz/logo.png",
+      hero_image_path: null,
+      gallery_paths: ["biz/a.jpg", "biz/b.jpg"],
+      menu_json: {
+        sections: [
+          {
+            id: "s1",
+            title: "Starters",
+            visible: true,
+            items: [
+              {
+                id: "i1",
+                name: "Soup",
+                description: "Daily",
+                price: "£6",
+                dietary: ["V"],
+              },
+            ],
+          },
+        ],
+      },
+      template_config_version: 3,
+    });
+
+    expect(branding.primary_color).toBe("#112233");
+    expect(branding.config_version).toBe(3);
+    expect(branding.menu.sections).toHaveLength(1);
+    expect(branding.logo_url).toContain("biz/logo.png");
+    expect(branding.gallery_urls).toHaveLength(2);
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
+  });
+
+  it("falls back to defaults when settings are missing", () => {
+    expect(defaultClientSiteBranding().config_version).toBe(0);
+    expect(brandingFromSiteSettings(null).menu.sections).toEqual([]);
+  });
+});

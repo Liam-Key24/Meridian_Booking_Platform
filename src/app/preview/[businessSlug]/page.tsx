@@ -34,7 +34,7 @@ export default async function TemplatePreviewPage({ params }: PageProps) {
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-[var(--meridian-space-page)] py-14">
         <EmptyState
           title="No publishable template"
-          description="This business has no assigned active Meridian template. Assign one in admin before preview or publish."
+          description="This business has no assigned active Meridian template matching its dashboard mode. Assign one under Admin → Settings → Template after running the latest migrations."
         />
       </main>
     );
@@ -66,6 +66,13 @@ export default async function TemplatePreviewPage({ params }: PageProps) {
             {preview.template.description}
           </p>
         ) : null}
+        <p className="mt-4 text-sm text-meridian-text-muted">
+          Branding config v{preview.branding.config_version} · primary{" "}
+          <code>{preview.branding.primary_color}</code>
+          {preview.branding.menu.sections.length > 0
+            ? ` · ${preview.branding.menu.sections.length} menu section(s)`
+            : null}
+        </p>
       </Card>
     </main>
   );
