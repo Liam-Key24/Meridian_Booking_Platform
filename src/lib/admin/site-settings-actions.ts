@@ -15,7 +15,7 @@ import {
   type BusinessMenuPdfs,
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
-import { maybeSyncBusinessTemplate } from "@/lib/templates/sync";
+import { revalidatePublishedClientSitePaths, syncSettingsToTemplate } from "@/lib/templates/sync";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -91,16 +91,7 @@ function revalidateSettings(businessId: string) {
 
 async function revalidateClientSitePages(businessId: string) {
   revalidateSettings(businessId);
-  const supabase = await createClient();
-  const { data: business } = await supabase
-    .from("businesses")
-    .select("slug")
-    .eq("id", businessId)
-    .maybeSingle();
-  if (business?.slug) {
-    revalidatePath(`/preview/${business.slug}`);
-    revalidatePath(`/menu/${business.slug}`);
-  }
+  await revalidatePublishedClientSitePaths(businessId);
 }
 
 async function uploadBusinessAsset(
@@ -282,12 +273,12 @@ export async function updateBusinessBranding(
     metadata: { primary, accent },
   });
 
-  const sync = await maybeSyncBusinessTemplate(businessId);
+  const message = await syncSettingsToTemplate(businessId, "Branding saved.");
   revalidateSettings(businessId);
 
   return {
     status: "success",
-    message: sync.message ?? "Branding saved.",
+    message,
   };
 }
 
@@ -345,12 +336,12 @@ export async function updateBusinessMenus(
     metadata: { sections: menu.sections.length },
   });
 
-  const sync = await maybeSyncBusinessTemplate(businessId);
+  const message = await syncSettingsToTemplate(businessId, "Menus saved.");
   await revalidateClientSitePages(businessId);
 
   return {
     status: "success",
-    message: sync.message ?? "Menus saved.",
+    message,
   };
 }
 
@@ -426,11 +417,11 @@ export async function updateBusinessMenuPdfs(
     metadata: { documents: documents.length },
   });
 
-  const sync = await maybeSyncBusinessTemplate(businessId);
+  const message = await syncSettingsToTemplate(businessId, "Menu PDFs saved.");
   await revalidateClientSitePages(businessId);
 
   return {
     status: "success",
-    message: sync.message ?? "Menu PDFs saved.",
+    message,
   };
 }

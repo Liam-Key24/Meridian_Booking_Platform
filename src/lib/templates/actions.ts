@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
+import {
+  revalidatePublishedClientSitePaths,
+  syncSettingsToTemplate,
+} from "@/lib/templates/sync";
 
 export type TemplateAssignState = {
   status: "idle" | "success" | "error";
@@ -92,6 +96,10 @@ export async function assignBusinessTemplate(
 
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath(`/admin/businesses/${businessId}/settings/template`);
-  revalidatePath(`/preview/${business.slug}`);
-  return { status: "success", message: "Template assigned." };
+  await revalidatePublishedClientSitePaths(businessId);
+  const message = await syncSettingsToTemplate(
+    businessId,
+    "Template assigned.",
+  );
+  return { status: "success", message };
 }

@@ -371,18 +371,28 @@ export function HospitalityClassicLayout({
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em]">
               Contact
             </p>
-            {booking.settings.notification_email ? (
-              <a
-                href={`mailto:${booking.settings.notification_email}`}
-                className="text-sm text-[color-mix(in_srgb,var(--client-background)_78%,transparent)] hover:text-[var(--client-background)]"
-              >
-                {booking.settings.notification_email}
-              </a>
-            ) : (
-              <p className="text-sm text-[color-mix(in_srgb,var(--client-background)_55%,transparent)]">
-                Contact email not configured
-              </p>
-            )}
+            <div className="space-y-2 text-sm text-[color-mix(in_srgb,var(--client-background)_78%,transparent)]">
+              {booking.settings.notification_email ? (
+                <a
+                  href={`mailto:${booking.settings.notification_email}`}
+                  className="block hover:text-[var(--client-background)]"
+                >
+                  {booking.settings.notification_email}
+                </a>
+              ) : (
+                <p className="text-[color-mix(in_srgb,var(--client-background)_55%,transparent)]">
+                  Contact email not configured
+                </p>
+              )}
+              {booking.settings.contact_phone ? (
+                <a
+                  href={`tel:${booking.settings.contact_phone.replace(/\s+/g, "")}`}
+                  className="block hover:text-[var(--client-background)]"
+                >
+                  {booking.settings.contact_phone}
+                </a>
+              ) : null}
+            </div>
           </div>
           <div>
             <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em]">

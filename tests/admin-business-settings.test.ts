@@ -127,3 +127,30 @@ describe("parseMenuPdfs", () => {
     expect(sql).toContain("application/pdf");
   });
 });
+
+describe("template settings sync", () => {
+  it("syncs settings after template assignment and admin saves", () => {
+    const sync = readFileSync(
+      join(process.cwd(), "src/lib/templates/sync.ts"),
+      "utf8",
+    );
+    const assign = readFileSync(
+      join(process.cwd(), "src/lib/templates/actions.ts"),
+      "utf8",
+    );
+    const adminActions = readFileSync(
+      join(process.cwd(), "src/lib/admin/actions.ts"),
+      "utf8",
+    );
+    const siteSettings = readFileSync(
+      join(process.cwd(), "src/lib/admin/site-settings-actions.ts"),
+      "utf8",
+    );
+
+    expect(sync).toContain("syncSettingsToTemplate");
+    expect(sync).toContain("revalidatePublishedClientSitePaths");
+    expect(assign).toContain("syncSettingsToTemplate");
+    expect(adminActions).toContain("syncSettingsToTemplate");
+    expect(siteSettings).toContain("syncSettingsToTemplate");
+  });
+});

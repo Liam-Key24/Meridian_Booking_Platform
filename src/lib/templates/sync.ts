@@ -163,8 +163,7 @@ export async function syncBusinessTemplate(
 
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath(`/admin/businesses/${businessId}/settings`);
-  revalidatePath(`/preview/${business.slug}`);
-  revalidatePath(`/book/${business.slug}`);
+  await revalidatePublishedClientSitePaths(businessId);
 
   if (options?.quiet) {
     return {
@@ -189,8 +188,34 @@ export async function syncBusinessTemplateAction(
   return syncBusinessTemplate(businessId);
 }
 
+export async function revalidatePublishedClientSitePaths(businessId: string) {
+  const supabase = await createClient();
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("slug")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  if (!business?.slug) return;
+
+  revalidatePath(`/preview/${business.slug}`);
+  revalidatePath(`/menu/${business.slug}`);
+  revalidatePath(`/book/${business.slug}`);
+}
+
 /**
- * After branding/menu saves: sync if an active assignment exists; otherwise no-op.
+ * After admin settings saves: sync assigned template if possible and return UI message.
+ */
+export async function syncSettingsToTemplate(
+  businessId: string,
+  savedMessage: string,
+): Promise<string> {
+  const sync = await maybeSyncBusinessTemplate(businessId);
+  return sync.message ?? savedMessage;
+}
+
+/**
+ * After settings saves: sync if an active assignment exists; otherwise no-op.
  */
 export async function maybeSyncBusinessTemplate(
   businessId: string,
@@ -210,7 +235,7 @@ export async function maybeSyncBusinessTemplate(
   ) {
     return {
       synced: false,
-      message: "Saved. Assign an active template to publish branding.",
+      message: "Saved. Assign an active template to publish settings to the client site.",
     };
   }
   return { synced: false, message: result.message };

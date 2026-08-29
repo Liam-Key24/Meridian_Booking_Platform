@@ -15,6 +15,7 @@ export type PublicBookingPage = {
     | "booking_mode"
     | "external_booking_url"
     | "notification_email"
+    | "contact_phone"
     | "max_party_size"
     | "opening_hours"
     | "holidays"
@@ -46,7 +47,7 @@ export async function getPublicBookingPage(
   const { data: settings } = await supabase
     .from("booking_settings")
     .select(
-      "timezone, booking_mode, external_booking_url, notification_email, max_party_size, opening_hours, holidays, booking_slot_minutes",
+      "timezone, booking_mode, external_booking_url, notification_email, contact_phone, max_party_size, opening_hours, holidays, booking_slot_minutes",
     )
     .eq("business_id", business.id)
     .maybeSingle();

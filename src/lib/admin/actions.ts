@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
 import { validateExternalBookingUrl } from "@/lib/booking/external-url";
+import { syncSettingsToTemplate } from "@/lib/templates/sync";
 import type {
   BookingMode,
   BusinessStatus,
@@ -618,7 +619,8 @@ export async function updateAdminBookingSettings(
   });
 
   revalidatePath(`/admin/businesses/${businessId}`);
-  return { status: "success", message: "Settings saved." };
+  const message = await syncSettingsToTemplate(businessId, "Settings saved.");
+  return { status: "success", message };
 }
 
 export async function upsertAdminService(
@@ -703,7 +705,8 @@ export async function upsertAdminService(
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath(`/admin/businesses/${businessId}/settings/services`);
   await revalidatePublicBookPath(businessId);
-  return { status: "success", message: "Service saved." };
+  const message = await syncSettingsToTemplate(businessId, "Service saved.");
+  return { status: "success", message };
 }
 
 function revalidateBusinessSettings(businessId: string, slug?: string) {
@@ -777,7 +780,8 @@ export async function updateBusinessDetails(
   revalidateBusinessSettings(businessId, "details");
   revalidatePath("/admin");
   await revalidatePublicBookPath(businessId);
-  return { status: "success", message: "Details saved." };
+  const message = await syncSettingsToTemplate(businessId, "Details saved.");
+  return { status: "success", message };
 }
 
 export async function updateAdminHospitalityHours(
@@ -843,7 +847,8 @@ export async function updateAdminHospitalityHours(
 
   revalidateBusinessSettings(businessId, "hours");
   await revalidatePublicBookPath(businessId);
-  return { status: "success", message: "Hours saved." };
+  const message = await syncSettingsToTemplate(businessId, "Hours saved.");
+  return { status: "success", message };
 }
 
 export async function updateAdminHospitalityTables(
@@ -920,7 +925,8 @@ export async function updateAdminHospitalityTables(
 
   revalidateBusinessSettings(businessId, "tables");
   await revalidatePublicBookPath(businessId);
-  return { status: "success", message: "Tables saved." };
+  const message = await syncSettingsToTemplate(businessId, "Tables saved.");
+  return { status: "success", message };
 }
 
 async function revalidatePublicBookPath(businessId: string) {
