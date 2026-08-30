@@ -231,7 +231,7 @@ export function HospitalityClassicLayout({
               />
             ) : (
               <div className="flex aspect-[4/5] items-center justify-center p-8 text-center text-sm text-[color-mix(in_srgb,var(--client-text)_55%,transparent)]">
-                Upload a hero image in Admin → Settings → Branding
+                Upload a hero image in Admin → Settings → Content
               </div>
             )}
           </div>
@@ -252,7 +252,7 @@ export function HospitalityClassicLayout({
               />
             ) : (
               <div className="flex aspect-square items-center justify-center p-8 text-center text-sm text-[color-mix(in_srgb,var(--client-text)_55%,transparent)]">
-                Add gallery images in Admin → Settings → Branding
+                Add gallery images in Admin → Settings → Content
               </div>
             )}
           </div>

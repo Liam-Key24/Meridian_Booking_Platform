@@ -130,6 +130,7 @@ export async function assignBusinessTemplate(
 
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath(`/admin/businesses/${businessId}/settings/branding`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/content`);
   revalidatePath(`/admin/businesses/${businessId}/settings/template`);
   await revalidatePublishedClientSitePaths(businessId);
   return {

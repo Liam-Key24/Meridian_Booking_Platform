@@ -676,7 +676,10 @@ export type Database = {
           background_color: string;
           text_color: string;
           logo_path: string | null;
+          favicon_path: string | null;
           hero_image_path: string | null;
+          heading_font_path: string | null;
+          body_font_path: string | null;
           gallery_paths: string[];
           menu_json: Json;
           menu_pdfs_json: Json;
@@ -694,7 +697,10 @@ export type Database = {
           background_color?: string;
           text_color?: string;
           logo_path?: string | null;
+          favicon_path?: string | null;
           hero_image_path?: string | null;
+          heading_font_path?: string | null;
+          body_font_path?: string | null;
           gallery_paths?: string[];
           menu_json?: Json;
           menu_pdfs_json?: Json;
@@ -712,7 +718,10 @@ export type Database = {
           background_color?: string;
           text_color?: string;
           logo_path?: string | null;
+          favicon_path?: string | null;
           hero_image_path?: string | null;
+          heading_font_path?: string | null;
+          body_font_path?: string | null;
           gallery_paths?: string[];
           menu_json?: Json;
           menu_pdfs_json?: Json;

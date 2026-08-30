@@ -97,7 +97,7 @@ export async function getClientSitePagePayload(
   const { data: siteSettings } = await supabase
     .from("client_site_settings")
     .select(
-      "primary_color, accent_color, background_color, text_color, logo_path, hero_image_path, gallery_paths, menu_json, menu_pdfs_json, template_config_version",
+      "primary_color, accent_color, background_color, text_color, logo_path, favicon_path, hero_image_path, heading_font_path, body_font_path, gallery_paths, menu_json, menu_pdfs_json, template_config_version",
     )
     .eq("business_id", business.id)
     .maybeSingle();

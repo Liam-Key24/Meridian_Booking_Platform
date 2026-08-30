@@ -40,6 +40,7 @@ export const BUSINESS_SETTINGS_NAV: BusinessSettingsNavGroup[] = [
     label: "Site",
     items: [
       { slug: "branding", label: "Branding" },
+      { slug: "content", label: "Content" },
       { slug: "menus", label: "Menus", modes: ["hospitality"] },
       { slug: "template", label: "Template" },
     ],

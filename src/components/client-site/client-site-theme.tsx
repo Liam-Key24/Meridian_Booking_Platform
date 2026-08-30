@@ -1,5 +1,6 @@
 import {
   brandingCssVariables,
+  brandingFontFaceCss,
   type ClientSiteBranding,
 } from "@/lib/templates/branding";
 
@@ -30,7 +31,10 @@ export function ClientSiteTheme({
         } as React.CSSProperties
       }
     >
-      <style>{`[data-client-site]{${cssText}}`}</style>
+      {branding.favicon_url ? (
+        <link rel="icon" href={branding.favicon_url} />
+      ) : null}
+      <style>{`${brandingFontFaceCss(branding)}[data-client-site]{${cssText}}`}</style>
       {children}
     </div>
   );

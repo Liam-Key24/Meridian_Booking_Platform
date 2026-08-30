@@ -30,6 +30,8 @@ describe("business settings nav", () => {
     expect(isSettingsSlugForMode("menus", "hospitality")).toBe(true);
     expect(isSettingsSlugForMode("menus", "appointments")).toBe(false);
     expect(isSettingsSlugForMode("branding", "appointments")).toBe(true);
+    expect(isSettingsSlugForMode("content", "hospitality")).toBe(true);
+    expect(isSettingsSlugForMode("content", "appointments")).toBe(true);
   });
 });
 
@@ -48,6 +50,20 @@ describe("client site settings migration", () => {
     expect(sql).toContain("last_synced_at");
     expect(sql).toContain("business-assets");
     expect(sql).toContain("enable row level security");
+  });
+
+  it("adds favicon and uploaded font columns", () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260830100001_client_site_content_and_fonts.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("favicon_path");
+    expect(sql).toContain("heading_font_path");
+    expect(sql).toContain("body_font_path");
+    expect(sql).toContain("font/woff2");
   });
 });
 

@@ -53,7 +53,7 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
   return (
     <SettingsPanel
       title="Branding"
-      description="Colours and images for the assigned template."
+      description="Colours and fonts for the assigned template."
     >
       <AdminBrandingForm
         businessId={business.id}
@@ -63,9 +63,8 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
           siteSettings?.background_color ?? DEFAULT_BRAND_COLORS.background_color
         }
         textColor={siteSettings?.text_color ?? DEFAULT_BRAND_COLORS.text_color}
-        logoPath={siteSettings?.logo_path ?? null}
-        heroImagePath={siteSettings?.hero_image_path ?? null}
-        galleryPaths={siteSettings?.gallery_paths ?? []}
+        headingFontPath={siteSettings?.heading_font_path ?? null}
+        bodyFontPath={siteSettings?.body_font_path ?? null}
         assignedTemplateName={assignedTemplate?.name ?? null}
         previewHref={`/preview/${business.slug}`}
       />

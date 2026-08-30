@@ -12,11 +12,13 @@ import {
 } from "@/lib/admin/actions";
 import {
   updateBusinessBranding,
+  updateBusinessContent,
   updateBusinessMenuPdfs,
   type SiteSettingsActionState,
 } from "@/lib/admin/site-settings-actions";
 import { ColorCirclePicker } from "@/components/admin/color-circle-picker";
 import {
+  assetFileName,
   publicAssetUrl,
   type BusinessMenuPdfs,
   type MenuPdfDocument,
@@ -478,9 +480,8 @@ export function AdminBrandingForm({
   accentColor,
   backgroundColor,
   textColor,
-  logoPath,
-  heroImagePath,
-  galleryPaths,
+  headingFontPath,
+  bodyFontPath,
   assignedTemplateName,
   previewHref,
 }: {
@@ -489,9 +490,8 @@ export function AdminBrandingForm({
   accentColor: string;
   backgroundColor: string;
   textColor: string;
-  logoPath: string | null;
-  heroImagePath: string | null;
-  galleryPaths: string[];
+  headingFontPath: string | null;
+  bodyFontPath: string | null;
   assignedTemplateName?: string | null;
   previewHref?: string;
 }) {
@@ -506,12 +506,6 @@ export function AdminBrandingForm({
       router.refresh();
     }
   }, [router, state.status]);
-
-  const logoUrl = publicAssetUrl(logoPath);
-  const heroUrl = publicAssetUrl(heroImagePath);
-  const galleryUrls = galleryPaths
-    .map((path) => ({ path, url: publicAssetUrl(path) }))
-    .filter((row): row is { path: string; url: string } => Boolean(row.url));
 
   return (
     <form action={action} className="space-y-6">
@@ -554,6 +548,114 @@ export function AdminBrandingForm({
         />
       </div>
       <div className="space-y-4">
+        <FontUploadField
+          label="Heading font"
+          name="headingFont"
+          clearName="clearHeadingFont"
+          currentPath={headingFontPath}
+        />
+        <FontUploadField
+          label="Body font"
+          name="bodyFont"
+          clearName="clearBodyFont"
+          currentPath={bodyFontPath}
+        />
+        <p className="text-xs text-meridian-text-muted">
+          Upload WOFF2, WOFF, TTF, or OTF for now. A font library comes later.
+        </p>
+      </div>
+      <Feedback state={state} />
+      <Button type="submit" disabled={pending}>
+        {pending ? "Saving…" : "Save branding"}
+      </Button>
+    </form>
+  );
+}
+
+function FontUploadField({
+  label,
+  name,
+  clearName,
+  currentPath,
+}: {
+  label: string;
+  name: string;
+  clearName: string;
+  currentPath: string | null;
+}) {
+  const fileName = assetFileName(currentPath);
+  return (
+    <div className="space-y-2">
+      <label className="text-sm font-medium text-meridian-text">{label}</label>
+      {fileName ? (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-meridian-text-muted">
+          <span>{fileName}</span>
+          <label className="flex items-center gap-2 text-sm text-meridian-text">
+            <input type="checkbox" name={clearName} className="size-4" />
+            Remove
+          </label>
+        </div>
+      ) : null}
+      <Input
+        label={`Upload ${label.toLowerCase()}`}
+        name={name}
+        type="file"
+        accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
+      />
+    </div>
+  );
+}
+
+export function AdminContentForm({
+  businessId,
+  logoPath,
+  faviconPath,
+  heroImagePath,
+  galleryPaths,
+  previewHref,
+}: {
+  businessId: string;
+  logoPath: string | null;
+  faviconPath: string | null;
+  heroImagePath: string | null;
+  galleryPaths: string[];
+  previewHref?: string;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessContent,
+    siteInitial,
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "success") {
+      router.refresh();
+    }
+  }, [router, state.status]);
+
+  const logoUrl = publicAssetUrl(logoPath);
+  const faviconUrl = publicAssetUrl(faviconPath);
+  const heroUrl = publicAssetUrl(heroImagePath);
+  const galleryUrls = galleryPaths
+    .map((path) => ({ path, url: publicAssetUrl(path) }))
+    .filter((row): row is { path: string; url: string } => Boolean(row.url));
+
+  return (
+    <form action={action} className="space-y-6">
+      <input type="hidden" name="businessId" value={businessId} />
+      {previewHref ? (
+        <p className="text-sm text-meridian-text-muted">
+          <a
+            href={previewHref}
+            className="font-medium text-meridian-teal hover:underline"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open preview
+          </a>
+        </p>
+      ) : null}
+      <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-meridian-text">Logo</label>
           {logoUrl ? (
@@ -573,6 +675,33 @@ export function AdminBrandingForm({
             </div>
           ) : null}
           <Input label="Upload logo" name="logo" type="file" accept="image/*" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-meridian-text">
+            Favicon
+          </label>
+          {faviconUrl ? (
+            <div className="flex items-center gap-4">
+              <Image
+                src={faviconUrl}
+                alt="Current favicon"
+                width={32}
+                height={32}
+                className="size-8 rounded-meridian-sm border border-meridian-border object-contain"
+                unoptimized
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="clearFavicon" className="size-4" />
+                Remove favicon
+              </label>
+            </div>
+          ) : null}
+          <Input
+            label="Upload favicon"
+            name="favicon"
+            type="file"
+            accept=".ico,image/x-icon,image/png,image/svg+xml,image/webp,image/jpeg"
+          />
         </div>
         <div className="space-y-2">
           <label className="text-sm font-medium text-meridian-text">
@@ -640,11 +769,18 @@ export function AdminBrandingForm({
       </div>
       <Feedback state={state} />
       <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save branding"}
+        {pending ? "Saving…" : "Save content"}
       </Button>
     </form>
   );
 }
+
+const EMPTY_MENU_PDF_ROW: MenuPdfDocument = {
+  id: "draft",
+  title: "",
+  path: "",
+  visible: true,
+};
 
 function newMenuPdfRow(): MenuPdfDocument {
   return {
@@ -667,7 +803,9 @@ export function AdminMenuPdfsForm({
     siteInitial,
   );
   const [documents, setDocuments] = useState<MenuPdfDocument[]>(
-    menuPdfs.documents.length > 0 ? menuPdfs.documents : [newMenuPdfRow()],
+    menuPdfs.documents.length > 0
+      ? menuPdfs.documents
+      : [{ ...EMPTY_MENU_PDF_ROW }],
   );
 
   return (

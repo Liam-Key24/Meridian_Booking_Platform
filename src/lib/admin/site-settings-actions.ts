@@ -79,6 +79,7 @@ function settingsPaths(businessId: string) {
     `/admin/businesses/${businessId}`,
     `/admin/businesses/${businessId}/settings`,
     `/admin/businesses/${businessId}/settings/branding`,
+    `/admin/businesses/${businessId}/settings/content`,
     `/admin/businesses/${businessId}/settings/menus`,
     `/admin/businesses/${businessId}/settings/template`,
   ];
@@ -95,43 +96,91 @@ async function revalidateClientSitePages(businessId: string) {
   await revalidatePublishedClientSitePaths(businessId);
 }
 
-async function uploadBusinessAsset(
+const FONT_EXTENSIONS = new Set(["woff2", "woff", "ttf", "otf"]);
+const FAVICON_TYPES = new Set([
+  ...ALLOWED_IMAGE_TYPES,
+  "image/x-icon",
+  "image/vnd.microsoft.icon",
+]);
+const MAX_FONT_BYTES = 2 * 1024 * 1024;
+
+function fileExtension(file: File): string {
+  return file.name.split(".").pop()?.toLowerCase() ?? "";
+}
+
+function imageExtension(file: File): string {
+  if (file.type === "image/svg+xml" || fileExtension(file) === "svg") return "svg";
+  if (file.type === "image/png" || fileExtension(file) === "png") return "png";
+  if (file.type === "image/webp" || fileExtension(file) === "webp") return "webp";
+  if (file.type === "image/gif" || fileExtension(file) === "gif") return "gif";
+  if (
+    file.type === "image/x-icon" ||
+    file.type === "image/vnd.microsoft.icon" ||
+    fileExtension(file) === "ico"
+  ) {
+    return "ico";
+  }
+  return "jpg";
+}
+
+async function storeBusinessAsset(
   businessId: string,
   file: File,
-  kind: "logo" | "hero" | "gallery",
+  kind: string,
+  ext: string,
 ): Promise<{ path: string } | { error: string }> {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
-    return { error: "Use JPEG, PNG, WebP, GIF, or SVG images." };
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return { error: "Image must be 5MB or smaller." };
-  }
-
-  const ext =
-    file.type === "image/svg+xml"
-      ? "svg"
-      : file.type === "image/png"
-        ? "png"
-        : file.type === "image/webp"
-          ? "webp"
-          : file.type === "image/gif"
-            ? "gif"
-            : "jpg";
   const objectPath = `${businessId}/${kind}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   const supabase = await createClient();
   const buffer = Buffer.from(await file.arrayBuffer());
   const { error } = await supabase.storage
     .from(BUSINESS_ASSETS_BUCKET)
     .upload(objectPath, buffer, {
-      contentType: file.type,
+      contentType: file.type || "application/octet-stream",
       upsert: false,
     });
 
   if (error) {
     console.error("[admin] asset upload", error);
-    return { error: "Could not upload image." };
+    return { error: "Could not upload file." };
   }
   return { path: objectPath };
+}
+
+async function uploadBusinessAsset(
+  businessId: string,
+  file: File,
+  kind: "logo" | "hero" | "gallery" | "favicon",
+): Promise<{ path: string } | { error: string }> {
+  const allowed = kind === "favicon" ? FAVICON_TYPES : ALLOWED_IMAGE_TYPES;
+  if (!allowed.has(file.type) && !(kind === "favicon" && fileExtension(file) === "ico")) {
+    return {
+      error:
+        kind === "favicon"
+          ? "Use ICO, PNG, SVG, JPEG, WebP, or GIF for the favicon."
+          : "Use JPEG, PNG, WebP, GIF, or SVG images.",
+    };
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { error: "Image must be 5MB or smaller." };
+  }
+
+  return storeBusinessAsset(businessId, file, kind, imageExtension(file));
+}
+
+async function uploadBusinessFont(
+  businessId: string,
+  file: File,
+  kind: "heading-font" | "body-font",
+): Promise<{ path: string } | { error: string }> {
+  const ext = fileExtension(file);
+  if (!FONT_EXTENSIONS.has(ext)) {
+    return { error: "Use WOFF2, WOFF, TTF, or OTF font files." };
+  }
+  if (file.size > MAX_FONT_BYTES) {
+    return { error: "Font must be 2MB or smaller." };
+  }
+
+  return storeBusinessAsset(businessId, file, kind, ext);
 }
 
 async function uploadMenuPdf(
@@ -195,11 +244,102 @@ export async function updateBusinessBranding(
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("client_site_settings")
-    .select("logo_path, hero_image_path, gallery_paths")
+    .select("heading_font_path, body_font_path")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  let headingFontPath = current?.heading_font_path ?? null;
+  let bodyFontPath = current?.body_font_path ?? null;
+
+  const headingFont = formData.get("headingFont");
+  if (headingFont instanceof File && headingFont.size > 0) {
+    const uploaded = await uploadBusinessFont(
+      businessId,
+      headingFont,
+      "heading-font",
+    );
+    if ("error" in uploaded) {
+      return { status: "error", message: uploaded.error };
+    }
+    headingFontPath = uploaded.path;
+  }
+  if (formData.get("clearHeadingFont") === "on") {
+    headingFontPath = null;
+  }
+
+  const bodyFont = formData.get("bodyFont");
+  if (bodyFont instanceof File && bodyFont.size > 0) {
+    const uploaded = await uploadBusinessFont(businessId, bodyFont, "body-font");
+    if ("error" in uploaded) {
+      return { status: "error", message: uploaded.error };
+    }
+    bodyFontPath = uploaded.path;
+  }
+  if (formData.get("clearBodyFont") === "on") {
+    bodyFontPath = null;
+  }
+
+  const adminDb = createServiceRoleClient();
+  const { error } = await adminDb
+    .from("client_site_settings")
+    .update({
+      primary_color: primary,
+      accent_color: accent,
+      background_color: background,
+      text_color: text,
+      heading_font_path: headingFontPath,
+      body_font_path: bodyFontPath,
+    })
+    .eq("business_id", businessId);
+
+  if (error) {
+    console.error("[admin] save branding", error);
+    return { status: "error", message: "Could not save branding." };
+  }
+
+  await writeAudit({
+    actorUserId: actor.user.id,
+    businessId,
+    action: "admin.site_settings.update_branding",
+    entityType: "client_site_settings",
+    entityId: businessId,
+    metadata: { primary, accent },
+  });
+
+  await syncSettingsToTemplate(businessId, "Branding saved.");
+  revalidateSettings(businessId);
+  await revalidatePublishedClientSitePaths(businessId);
+
+  return {
+    status: "success",
+    message: "Branding saved.",
+  };
+}
+
+export async function updateBusinessContent(
+  _prev: SiteSettingsActionState,
+  formData: FormData,
+): Promise<SiteSettingsActionState> {
+  const actor = await requireAdminActor();
+  if (!actor) {
+    return { status: "error", message: "Meridian admin only." };
+  }
+
+  const businessId = String(formData.get("businessId") ?? "");
+  const ensured = await ensureSiteSettings(businessId);
+  if (!ensured.ok) {
+    return { status: "error", message: "Could not create site settings." };
+  }
+
+  const supabase = await createClient();
+  const { data: current } = await supabase
+    .from("client_site_settings")
+    .select("logo_path, favicon_path, hero_image_path, gallery_paths")
     .eq("business_id", businessId)
     .maybeSingle();
 
   let logoPath = current?.logo_path ?? null;
+  let faviconPath = current?.favicon_path ?? null;
   let heroPath = current?.hero_image_path ?? null;
   let galleryPaths = [...(current?.gallery_paths ?? [])];
 
@@ -213,6 +353,22 @@ export async function updateBusinessBranding(
   }
   if (formData.get("clearLogo") === "on") {
     logoPath = null;
+  }
+
+  const faviconFile = formData.get("favicon");
+  if (faviconFile instanceof File && faviconFile.size > 0) {
+    const uploaded = await uploadBusinessAsset(
+      businessId,
+      faviconFile,
+      "favicon",
+    );
+    if ("error" in uploaded) {
+      return { status: "error", message: uploaded.error };
+    }
+    faviconPath = uploaded.path;
+  }
+  if (formData.get("clearFavicon") === "on") {
+    faviconPath = null;
   }
 
   const heroFile = formData.get("heroImage");
@@ -252,37 +408,34 @@ export async function updateBusinessBranding(
   const { error } = await adminDb
     .from("client_site_settings")
     .update({
-      primary_color: primary,
-      accent_color: accent,
-      background_color: background,
-      text_color: text,
       logo_path: logoPath,
+      favicon_path: faviconPath,
       hero_image_path: heroPath,
       gallery_paths: galleryPaths,
     })
     .eq("business_id", businessId);
 
   if (error) {
-    console.error("[admin] save branding", error);
-    return { status: "error", message: "Could not save branding." };
+    console.error("[admin] save content", error);
+    return { status: "error", message: "Could not save content." };
   }
 
   await writeAudit({
     actorUserId: actor.user.id,
     businessId,
-    action: "admin.site_settings.update_branding",
+    action: "admin.site_settings.update_content",
     entityType: "client_site_settings",
     entityId: businessId,
-    metadata: { primary, accent },
+    metadata: { hasLogo: Boolean(logoPath), hasHero: Boolean(heroPath) },
   });
 
-  await syncSettingsToTemplate(businessId, "Branding saved.");
+  await syncSettingsToTemplate(businessId, "Content saved.");
   revalidateSettings(businessId);
   await revalidatePublishedClientSitePaths(businessId);
 
   return {
     status: "success",
-    message: "Branding saved.",
+    message: "Content saved.",
   };
 }
 

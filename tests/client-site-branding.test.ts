@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   brandingCssVariables,
+  brandingFontFaceCss,
   brandingFromSiteSettings,
   defaultClientSiteBranding,
 } from "@/lib/templates/branding";
@@ -16,7 +17,10 @@ describe("client site branding", () => {
       background_color: "#FFFFFF",
       text_color: "#000000",
       logo_path: "biz/logo.png",
+      favicon_path: "biz/favicon.ico",
       hero_image_path: null,
+      heading_font_path: "biz/heading.woff2",
+      body_font_path: null,
       gallery_paths: ["biz/a.jpg", "biz/b.jpg"],
       menu_json: {
         sections: [
@@ -61,6 +65,8 @@ describe("client site branding", () => {
     expect(branding.menu_pdfs).toHaveLength(1);
     expect(branding.menu_pdfs[0]?.title).toBe("Lunch");
     expect(branding.logo_url).toContain("biz/logo.png");
+    expect(branding.favicon_url).toContain("biz/favicon.ico");
+    expect(branding.heading_font_url).toContain("biz/heading.woff2");
     expect(branding.gallery_urls).toHaveLength(2);
 
     process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
@@ -82,6 +88,34 @@ describe("client site branding", () => {
     expect(vars["--client-font-body"]).toContain("system-ui");
   });
 
+  it("uses uploaded fonts ahead of the template preset", () => {
+    const previous = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
+
+    const branding = brandingFromSiteSettings({
+      primary_color: "#112233",
+      accent_color: "#445566",
+      background_color: "#FFFFFF",
+      text_color: "#000000",
+      logo_path: null,
+      favicon_path: null,
+      hero_image_path: null,
+      heading_font_path: "biz/display.woff2",
+      body_font_path: "biz/text.ttf",
+      gallery_paths: [],
+      menu_json: { sections: [] },
+      menu_pdfs_json: { documents: [] },
+      template_config_version: 1,
+    });
+    const vars = brandingCssVariables(branding, "hospitality-classic");
+    expect(vars["--client-font-heading"]).toContain("ClientHeading");
+    expect(vars["--client-font-body"]).toContain("ClientBody");
+    expect(brandingFontFaceCss(branding)).toContain("display.woff2");
+    expect(brandingFontFaceCss(branding)).toContain("truetype");
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = previous;
+  });
+
   it("uses saved site settings colours on preview", () => {
     const branding = brandingFromSiteSettings({
       primary_color: "#112233",
@@ -89,7 +123,10 @@ describe("client site branding", () => {
       background_color: "#FFFFFF",
       text_color: "#000000",
       logo_path: null,
+      favicon_path: null,
       hero_image_path: null,
+      heading_font_path: null,
+      body_font_path: null,
       gallery_paths: [],
       menu_json: { sections: [] },
       menu_pdfs_json: { documents: [] },

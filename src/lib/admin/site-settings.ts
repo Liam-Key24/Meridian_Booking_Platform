@@ -134,3 +134,16 @@ export function publicAssetUrl(path: string | null | undefined): string | null {
   if (!base) return null;
   return `${base.replace(/\/$/, "")}/storage/v1/object/public/${BUSINESS_ASSETS_BUCKET}/${path}`;
 }
+
+export function assetFileName(path: string | null | undefined): string {
+  if (!path) return "";
+  return path.split("/").pop() ?? path;
+}
+
+export function fontFormatFromPath(path: string): "woff2" | "woff" | "truetype" | "opentype" {
+  const ext = path.split(".").pop()?.toLowerCase();
+  if (ext === "woff") return "woff";
+  if (ext === "ttf") return "truetype";
+  if (ext === "otf") return "opentype";
+  return "woff2";
+}
