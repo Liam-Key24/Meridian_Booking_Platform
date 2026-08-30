@@ -21,6 +21,18 @@ export const TEMPLATE_SECTION_LABELS: Record<TemplateSectionKey, string> = {
   staff: "Staff",
 };
 
+/** Labels for hospitality gallery tiles, in display order. */
+export const GALLERY_SLOT_LABELS = [
+  "Atmosphere",
+  "Plating",
+  "Interior",
+  "Ingredients",
+  "Dining room",
+  "Wine",
+  "Signature dish",
+  "Wine selection",
+] as const;
+
 export type TemplateBrandingPreset = {
   primary: string;
   accent: string;

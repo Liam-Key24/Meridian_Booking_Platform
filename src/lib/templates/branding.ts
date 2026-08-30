@@ -7,7 +7,11 @@ import {
   publicAssetUrl,
 } from "@/lib/admin/site-settings";
 import { templateBrandingPresetForSlug } from "@/lib/templates/catalog";
-import type { Tables } from "@/types/database";
+import {
+  parseSiteSectionCopy,
+  type SiteSectionCopy,
+} from "@/lib/templates/section-copy";
+import type { Json, Tables } from "@/types/database";
 
 export type ClientSiteMenuPdf = MenuPdfDocument & {
   url: string;
@@ -26,6 +30,7 @@ export type ClientSiteBranding = {
   gallery_urls: string[];
   menu: BusinessMenu;
   menu_pdfs: ClientSiteMenuPdf[];
+  copy: SiteSectionCopy;
   config_version: number;
 };
 
@@ -44,7 +49,9 @@ type SiteSettingsRow = Pick<
   | "menu_json"
   | "menu_pdfs_json"
   | "template_config_version"
->;
+> & {
+  section_copy_json?: Json | null;
+};
 
 export function defaultClientSiteBranding(): ClientSiteBranding {
   return {
@@ -60,6 +67,7 @@ export function defaultClientSiteBranding(): ClientSiteBranding {
     gallery_urls: [],
     menu: { sections: [] },
     menu_pdfs: [],
+    copy: parseSiteSectionCopy(null),
     config_version: 0,
   };
 }
@@ -90,6 +98,7 @@ export function brandingFromSiteSettings(
         return url ? { ...doc, url } : null;
       })
       .filter((doc): doc is ClientSiteMenuPdf => doc !== null),
+    copy: parseSiteSectionCopy(row.section_copy_json),
     config_version: row.template_config_version,
   };
 }

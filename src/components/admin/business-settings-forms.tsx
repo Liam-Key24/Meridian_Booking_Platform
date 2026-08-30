@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import {
   updateAdminHospitalityHours,
@@ -17,12 +17,18 @@ import {
   type SiteSettingsActionState,
 } from "@/lib/admin/site-settings-actions";
 import { ColorCirclePicker } from "@/components/admin/color-circle-picker";
+import { ImageDropField } from "@/components/admin/image-drop-field";
 import {
   assetFileName,
   publicAssetUrl,
   type BusinessMenuPdfs,
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
+import {
+  GALLERY_SLOT_LABELS,
+  TEMPLATE_SECTION_LABELS,
+} from "@/lib/templates/catalog";
+import type { SiteSectionCopy } from "@/lib/templates/section-copy";
 import {
   WEEKDAYS,
   WEEKDAY_LABELS,
@@ -482,7 +488,6 @@ export function AdminBrandingForm({
   textColor,
   headingFontPath,
   bodyFontPath,
-  assignedTemplateName,
   previewHref,
 }: {
   businessId: string;
@@ -492,7 +497,6 @@ export function AdminBrandingForm({
   textColor: string;
   headingFontPath: string | null;
   bodyFontPath: string | null;
-  assignedTemplateName?: string | null;
   previewHref?: string;
 }) {
   const [state, action, pending] = useActionState(
@@ -506,6 +510,206 @@ export function AdminBrandingForm({
       router.refresh();
     }
   }, [router, state.status]);
+
+  return (
+    <form action={action} className="space-y-8">
+      <input type="hidden" name="businessId" value={businessId} />
+      <div className="flex flex-wrap items-start justify-center gap-10">
+        <ColorCirclePicker
+          label="Primary"
+          name="primaryColor"
+          defaultValue={primaryColor}
+          size="xl"
+        />
+        <ColorCirclePicker
+          label="Accent"
+          name="accentColor"
+          defaultValue={accentColor}
+          size="xl"
+        />
+        <ColorCirclePicker
+          label="Background"
+          name="backgroundColor"
+          defaultValue={backgroundColor}
+          size="xl"
+        />
+        <ColorCirclePicker
+          label="Text"
+          name="textColor"
+          defaultValue={textColor}
+          size="xl"
+        />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FontUploadField
+          label="Heading font"
+          name="headingFont"
+          clearName="clearHeadingFont"
+          currentPath={headingFontPath}
+        />
+        <FontUploadField
+          label="Body font"
+          name="bodyFont"
+          clearName="clearBodyFont"
+          currentPath={bodyFontPath}
+        />
+      </div>
+      <Feedback state={state} />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Save branding"}
+        </Button>
+        {previewHref ? (
+          <a
+            href={previewHref}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex h-11 items-center justify-center rounded-meridian border border-meridian-border bg-meridian-surface px-5 text-sm font-semibold text-meridian-text hover:border-meridian-border-strong hover:bg-meridian-surface-subtle"
+          >
+            Show preview
+          </a>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+function FontUploadField({
+  label,
+  name,
+  clearName,
+  currentPath,
+}: {
+  label: string;
+  name: string;
+  clearName: string;
+  currentPath: string | null;
+}) {
+  const fileName = assetFileName(currentPath);
+  return (
+    <div className="space-y-2">
+      {fileName ? (
+        <div className="flex flex-wrap items-center gap-3 text-sm text-meridian-text-muted">
+          <span>{fileName}</span>
+          <label className="flex items-center gap-2 text-sm text-meridian-text">
+            <input type="checkbox" name={clearName} className="size-4" />
+            Remove
+          </label>
+        </div>
+      ) : null}
+      <Input
+        label={label}
+        name={name}
+        type="file"
+        accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
+      />
+    </div>
+  );
+}
+
+function ContentSection({
+  section,
+  title,
+  description,
+  children,
+}: {
+  section: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4 rounded-meridian border border-meridian-border p-5">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-meridian-teal">
+          {section}
+        </p>
+        <h3 className="text-base font-semibold text-meridian-text">{title}</h3>
+        <p className="text-sm text-meridian-text-muted">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function CurrentAsset({
+  src,
+  alt,
+  wide,
+  children,
+}: {
+  src: string;
+  alt: string;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-4">
+      <Image
+        src={src}
+        alt={alt}
+        width={wide ? 320 : 80}
+        height={wide ? 120 : 80}
+        className={
+          wide
+            ? "max-h-32 rounded-meridian-sm border border-meridian-border object-cover"
+            : "size-20 rounded-meridian-sm border border-meridian-border object-contain"
+        }
+        unoptimized
+      />
+      {children}
+    </div>
+  );
+}
+
+export function AdminContentForm({
+  businessId,
+  logoPath,
+  faviconPath,
+  heroImagePath,
+  galleryPaths,
+  copy,
+  showHero = true,
+  showGallery = true,
+  showContact = true,
+  assignedTemplateName,
+  previewHref,
+}: {
+  businessId: string;
+  logoPath: string | null;
+  faviconPath: string | null;
+  heroImagePath: string | null;
+  galleryPaths: string[];
+  copy: SiteSectionCopy;
+  showHero?: boolean;
+  showGallery?: boolean;
+  showContact?: boolean;
+  assignedTemplateName?: string | null;
+  previewHref?: string;
+}) {
+  const [state, action, pending] = useActionState(
+    updateBusinessContent,
+    siteInitial,
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "success") {
+      router.refresh();
+    }
+  }, [router, state.status]);
+
+  const logoUrl = publicAssetUrl(logoPath);
+  const faviconUrl = publicAssetUrl(faviconPath);
+  const heroUrl = publicAssetUrl(heroImagePath);
+  const galleryUrls = galleryPaths
+    .map((path, index) => ({
+      path,
+      url: publicAssetUrl(path),
+      label: GALLERY_SLOT_LABELS[index] ?? `Photo ${index + 1}`,
+      note: index === 0 ? "Also used in About" : null,
+    }))
+    .filter((row): row is typeof row & { url: string } => Boolean(row.url));
 
   return (
     <form action={action} className="space-y-6">
@@ -525,225 +729,140 @@ export function AdminBrandingForm({
           ) : null}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-6">
-        <ColorCirclePicker
-          label="Primary"
-          name="primaryColor"
-          defaultValue={primaryColor}
-        />
-        <ColorCirclePicker
-          label="Accent"
-          name="accentColor"
-          defaultValue={accentColor}
-        />
-        <ColorCirclePicker
-          label="Background"
-          name="backgroundColor"
-          defaultValue={backgroundColor}
-        />
-        <ColorCirclePicker
-          label="Text"
-          name="textColor"
-          defaultValue={textColor}
-        />
-      </div>
-      <div className="space-y-4">
-        <FontUploadField
-          label="Heading font"
-          name="headingFont"
-          clearName="clearHeadingFont"
-          currentPath={headingFontPath}
-        />
-        <FontUploadField
-          label="Body font"
-          name="bodyFont"
-          clearName="clearBodyFont"
-          currentPath={bodyFontPath}
-        />
-        <p className="text-xs text-meridian-text-muted">
-          Upload WOFF2, WOFF, TTF, or OTF for now. A font library comes later.
-        </p>
-      </div>
-      <Feedback state={state} />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save branding"}
-      </Button>
-    </form>
-  );
-}
 
-function FontUploadField({
-  label,
-  name,
-  clearName,
-  currentPath,
-}: {
-  label: string;
-  name: string;
-  clearName: string;
-  currentPath: string | null;
-}) {
-  const fileName = assetFileName(currentPath);
-  return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-meridian-text">{label}</label>
-      {fileName ? (
-        <div className="flex flex-wrap items-center gap-3 text-sm text-meridian-text-muted">
-          <span>{fileName}</span>
-          <label className="flex items-center gap-2 text-sm text-meridian-text">
-            <input type="checkbox" name={clearName} className="size-4" />
-            Remove
-          </label>
-        </div>
-      ) : null}
-      <Input
-        label={`Upload ${label.toLowerCase()}`}
-        name={name}
-        type="file"
-        accept=".woff2,.woff,.ttf,.otf,font/woff2,font/woff,font/ttf,font/otf"
-      />
-    </div>
-  );
-}
+      <ContentSection
+        section="Header"
+        title="Logo"
+        description="Appears in the site header next to the business name."
+      >
+        {logoUrl ? (
+          <CurrentAsset src={logoUrl} alt="Current logo">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="clearLogo" className="size-4" />
+              Remove logo
+            </label>
+          </CurrentAsset>
+        ) : null}
+        <ImageDropField name="logo" />
+      </ContentSection>
 
-export function AdminContentForm({
-  businessId,
-  logoPath,
-  faviconPath,
-  heroImagePath,
-  galleryPaths,
-  previewHref,
-}: {
-  businessId: string;
-  logoPath: string | null;
-  faviconPath: string | null;
-  heroImagePath: string | null;
-  galleryPaths: string[];
-  previewHref?: string;
-}) {
-  const [state, action, pending] = useActionState(
-    updateBusinessContent,
-    siteInitial,
-  );
-  const router = useRouter();
+      <ContentSection
+        section="Browser tab"
+        title="Favicon"
+        description="Small icon in the browser tab and bookmarks."
+      >
+        {faviconUrl ? (
+          <CurrentAsset src={faviconUrl} alt="Current favicon">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="clearFavicon" className="size-4" />
+              Remove favicon
+            </label>
+          </CurrentAsset>
+        ) : null}
+        <ImageDropField
+          name="favicon"
+          accept=".ico,image/x-icon,image/png,image/svg+xml,image/webp,image/jpeg"
+          formatsHint="Supports: ICO, PNG, SVG, JPEG, WEBP"
+        />
+      </ContentSection>
 
-  useEffect(() => {
-    if (state.status === "success") {
-      router.refresh();
-    }
-  }, [router, state.status]);
-
-  const logoUrl = publicAssetUrl(logoPath);
-  const faviconUrl = publicAssetUrl(faviconPath);
-  const heroUrl = publicAssetUrl(heroImagePath);
-  const galleryUrls = galleryPaths
-    .map((path) => ({ path, url: publicAssetUrl(path) }))
-    .filter((row): row is { path: string; url: string } => Boolean(row.url));
-
-  return (
-    <form action={action} className="space-y-6">
-      <input type="hidden" name="businessId" value={businessId} />
-      {previewHref ? (
-        <p className="text-sm text-meridian-text-muted">
-          <a
-            href={previewHref}
-            className="font-medium text-meridian-teal hover:underline"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open preview
-          </a>
-        </p>
-      ) : null}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-meridian-text">Logo</label>
-          {logoUrl ? (
-            <div className="flex items-center gap-4">
-              <Image
-                src={logoUrl}
-                alt="Current logo"
-                width={80}
-                height={80}
-                className="rounded-meridian-sm border border-meridian-border object-contain"
-                unoptimized
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="clearLogo" className="size-4" />
-                Remove logo
-              </label>
-            </div>
-          ) : null}
-          <Input label="Upload logo" name="logo" type="file" accept="image/*" />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-meridian-text">
-            Favicon
-          </label>
-          {faviconUrl ? (
-            <div className="flex items-center gap-4">
-              <Image
-                src={faviconUrl}
-                alt="Current favicon"
-                width={32}
-                height={32}
-                className="size-8 rounded-meridian-sm border border-meridian-border object-contain"
-                unoptimized
-              />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="clearFavicon" className="size-4" />
-                Remove favicon
-              </label>
-            </div>
-          ) : null}
+      {showHero ? (
+        <ContentSection
+          section={TEMPLATE_SECTION_LABELS.hero}
+          title="Hero"
+          description="Headline, introduction, buttons, and photo at the top of the homepage."
+        >
           <Input
-            label="Upload favicon"
-            name="favicon"
-            type="file"
-            accept=".ico,image/x-icon,image/png,image/svg+xml,image/webp,image/jpeg"
+            label="Heading"
+            name="heroHeading"
+            defaultValue={copy.hero_heading}
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-meridian-text">
-            Hero image
-          </label>
+          <Textarea
+            label="Introduction"
+            name="heroBody"
+            defaultValue={copy.hero_body}
+            rows={4}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
+              label="Primary button"
+              name="heroPrimaryCta"
+              defaultValue={copy.hero_primary_cta}
+            />
+            <Input
+              label="Secondary button"
+              name="heroSecondaryCta"
+              defaultValue={copy.hero_secondary_cta}
+            />
+          </div>
           {heroUrl ? (
-            <div className="space-y-2">
-              <Image
-                src={heroUrl}
-                alt="Current hero"
-                width={320}
-                height={120}
-                className="max-h-32 rounded-meridian-sm border border-meridian-border object-cover"
-                unoptimized
-              />
+            <CurrentAsset src={heroUrl} alt="Current hero" wide>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="clearHero" className="size-4" />
                 Remove hero
               </label>
-            </div>
+            </CurrentAsset>
           ) : null}
-          <Input
-            label="Upload hero"
-            name="heroImage"
-            type="file"
-            accept="image/*"
+          <ImageDropField name="heroImage" />
+        </ContentSection>
+      ) : null}
+
+      {showHero ? (
+        <ContentSection
+          section="About"
+          title="About"
+          description="Story section below the hero. The first gallery photo sits beside this text."
+        >
+          <Textarea
+            label="Heading"
+            name="aboutHeading"
+            defaultValue={copy.about_heading}
+            rows={2}
+            hint="Use a new line to split the heading."
           />
-        </div>
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-meridian-text">
-            Gallery
-          </label>
+          <Textarea
+            label="Story"
+            name="aboutBody"
+            defaultValue={copy.about_body}
+            rows={6}
+            hint="Leave a blank line between paragraphs."
+          />
+        </ContentSection>
+      ) : null}
+
+      {showGallery ? (
+        <ContentSection
+          section={TEMPLATE_SECTION_LABELS.gallery}
+          title="Gallery"
+          description="Heading and photos for the Gallery section. The first photo is also used in About."
+        >
+          <Input
+            label="Heading"
+            name="galleryHeading"
+            defaultValue={copy.gallery_heading}
+          />
+          <Textarea
+            label="Introduction"
+            name="galleryBody"
+            defaultValue={copy.gallery_body}
+            rows={3}
+          />
           {galleryUrls.length > 0 ? (
-            <ul className="flex flex-wrap gap-3">
-              {galleryUrls.map(({ path, url }) => (
-                <li key={path} className="space-y-1">
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {galleryUrls.map(({ path, url, label, note }) => (
+                <li key={path} className="space-y-2">
+                  <p className="text-sm font-medium text-meridian-text">
+                    {label}
+                  </p>
+                  {note ? (
+                    <p className="text-xs text-meridian-text-muted">{note}</p>
+                  ) : null}
                   <Image
                     src={url}
-                    alt=""
-                    width={96}
-                    height={96}
-                    className="size-24 rounded-meridian-sm border border-meridian-border object-cover"
+                    alt={label}
+                    width={160}
+                    height={120}
+                    className="h-28 w-full rounded-meridian-sm border border-meridian-border object-cover"
                     unoptimized
                   />
                   <label className="flex items-center gap-2 text-xs text-meridian-text-muted">
@@ -759,14 +878,71 @@ export function AdminContentForm({
               ))}
             </ul>
           ) : null}
+          {galleryUrls.length < GALLERY_SLOT_LABELS.length ? (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-meridian-text">
+                Next: {GALLERY_SLOT_LABELS[galleryUrls.length]}
+              </p>
+              <ImageDropField name="galleryImage" />
+            </div>
+          ) : (
+            <p className="text-sm text-meridian-text-muted">
+              All {GALLERY_SLOT_LABELS.length} gallery slots are filled.
+            </p>
+          )}
+        </ContentSection>
+      ) : null}
+
+      {showHero ? (
+        <ContentSection
+          section="Testimonials"
+          title="Guest experiences"
+          description="Quotes shown below the gallery on the homepage."
+        >
           <Input
-            label="Add gallery image"
-            name="galleryImage"
-            type="file"
-            accept="image/*"
+            label="Heading"
+            name="testimonialsHeading"
+            defaultValue={copy.testimonials_heading}
           />
-        </div>
-      </div>
+          {copy.testimonials.map((item, index) => (
+            <div key={index} className="space-y-3">
+              <Textarea
+                label={`Quote ${index + 1}`}
+                name={`testimonial${index + 1}Quote`}
+                defaultValue={item.quote}
+                rows={3}
+              />
+              <Input
+                label="Guest name"
+                name={`testimonial${index + 1}Name`}
+                defaultValue={item.name}
+              />
+            </div>
+          ))}
+        </ContentSection>
+      ) : null}
+
+      {showContact ? (
+        <ContentSection
+          section={TEMPLATE_SECTION_LABELS.contact}
+          title="Contact"
+          description="Short lines in the site footer. Email and phone come from Booking settings."
+        >
+          <Textarea
+            label="Tagline"
+            name="contactTagline"
+            defaultValue={copy.contact_tagline}
+            rows={3}
+          />
+          <Textarea
+            label="Visit note"
+            name="contactVisit"
+            defaultValue={copy.contact_visit}
+            rows={3}
+          />
+        </ContentSection>
+      ) : null}
+
       <Feedback state={state} />
       <Button type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save content"}

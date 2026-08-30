@@ -16,6 +16,11 @@ import {
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
 import { revalidatePublishedClientSitePaths, syncSettingsToTemplate } from "@/lib/templates/sync";
+import {
+  mergeSectionCopyFromFormData,
+  parseSiteSectionCopy,
+  sectionCopyToJson,
+} from "@/lib/templates/section-copy";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
@@ -334,7 +339,9 @@ export async function updateBusinessContent(
   const supabase = await createClient();
   const { data: current } = await supabase
     .from("client_site_settings")
-    .select("logo_path, favicon_path, hero_image_path, gallery_paths")
+    .select(
+      "logo_path, favicon_path, hero_image_path, gallery_paths, section_copy_json",
+    )
     .eq("business_id", businessId)
     .maybeSingle();
 
@@ -412,6 +419,12 @@ export async function updateBusinessContent(
       favicon_path: faviconPath,
       hero_image_path: heroPath,
       gallery_paths: galleryPaths,
+      section_copy_json: sectionCopyToJson(
+        mergeSectionCopyFromFormData(
+          formData,
+          parseSiteSectionCopy(current?.section_copy_json),
+        ),
+      ),
     })
     .eq("business_id", businessId);
 

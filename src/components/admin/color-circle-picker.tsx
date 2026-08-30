@@ -12,10 +12,11 @@ export function ColorCirclePicker({
   label: string;
   name: string;
   defaultValue: string;
-  size?: "md" | "lg";
+  size?: "md" | "lg" | "xl";
 }) {
   const [value, setValue] = useState(defaultValue);
-  const dimension = size === "lg" ? "size-11" : "size-8";
+  const dimension =
+    size === "xl" ? "size-20" : size === "lg" ? "size-11" : "size-8";
 
   useEffect(() => {
     setValue(defaultValue);
@@ -44,7 +45,15 @@ export function ColorCirclePicker({
           )}
         />
       </span>
-      <span className="text-[11px] text-meridian-text-muted">{label}</span>
+      <span
+        className={
+          size === "xl"
+            ? "text-sm font-medium text-meridian-text"
+            : "text-[11px] text-meridian-text-muted"
+        }
+      >
+        {label}
+      </span>
     </label>
   );
 }

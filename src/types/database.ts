@@ -683,6 +683,7 @@ export type Database = {
           gallery_paths: string[];
           menu_json: Json;
           menu_pdfs_json: Json;
+          section_copy_json: Json;
           template_config_version: number;
           template_synced_at: string | null;
           template_sync_error: string | null;
@@ -704,6 +705,7 @@ export type Database = {
           gallery_paths?: string[];
           menu_json?: Json;
           menu_pdfs_json?: Json;
+          section_copy_json?: Json;
           template_config_version?: number;
           template_synced_at?: string | null;
           template_sync_error?: string | null;
@@ -725,6 +727,7 @@ export type Database = {
           gallery_paths?: string[];
           menu_json?: Json;
           menu_pdfs_json?: Json;
+          section_copy_json?: Json;
           template_config_version?: number;
           template_synced_at?: string | null;
           template_sync_error?: string | null;

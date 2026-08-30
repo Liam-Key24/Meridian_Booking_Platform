@@ -6,6 +6,7 @@ import {
   isSettingsSlugForMode,
 } from "@/lib/admin/business-settings-nav";
 import { parseBusinessMenu, parseMenuPdfs } from "@/lib/admin/site-settings";
+import { GALLERY_SLOT_LABELS } from "@/lib/templates/catalog";
 
 describe("business settings nav", () => {
   it("shows hospitality hours, tables, and menus", () => {
@@ -65,6 +66,17 @@ describe("client site settings migration", () => {
     expect(sql).toContain("body_font_path");
     expect(sql).toContain("font/woff2");
   });
+
+  it("adds written section copy json", () => {
+    const sql = readFileSync(
+      join(
+        process.cwd(),
+        "supabase/migrations/20260830084150_client_site_section_copy.sql",
+      ),
+      "utf8",
+    );
+    expect(sql).toContain("section_copy_json");
+  });
 });
 
 describe("site templates dashboard_mode migration", () => {
@@ -92,6 +104,21 @@ describe("site templates dashboard_mode migration", () => {
     );
     expect(sql).toContain("hospitality-classic");
     expect(sql).toContain("'active'");
+  });
+});
+
+describe("gallery slot labels", () => {
+  it("names each hospitality gallery tile in order", () => {
+    expect(GALLERY_SLOT_LABELS).toEqual([
+      "Atmosphere",
+      "Plating",
+      "Interior",
+      "Ingredients",
+      "Dining room",
+      "Wine",
+      "Signature dish",
+      "Wine selection",
+    ]);
   });
 });
 

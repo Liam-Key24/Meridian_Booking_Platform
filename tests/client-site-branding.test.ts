@@ -5,6 +5,12 @@ import {
   brandingFromSiteSettings,
   defaultClientSiteBranding,
 } from "@/lib/templates/branding";
+import {
+  DEFAULT_SITE_COPY,
+  mergeSectionCopyFromFormData,
+  parseSiteSectionCopy,
+  resolveSiteSectionCopy,
+} from "@/lib/templates/section-copy";
 
 describe("client site branding", () => {
   it("maps admin site settings into template branding", () => {
@@ -135,5 +141,31 @@ describe("client site branding", () => {
 
     expect(branding.primary_color).toBe("#112233");
     expect(branding.accent_color).toBe("#445566");
+  });
+});
+
+describe("site section copy", () => {
+  it("resolves saved hero copy ahead of template fallbacks", () => {
+    const saved = parseSiteSectionCopy({
+      hero_heading: "Custom heading",
+      hero_body: "Custom intro",
+    });
+    const copy = resolveSiteSectionCopy(saved, {
+      hero_body: "Template description",
+    });
+    expect(copy.hero_heading).toBe("Custom heading");
+    expect(copy.hero_body).toBe("Custom intro");
+    expect(copy.gallery_heading).toBe(DEFAULT_SITE_COPY.gallery_heading);
+  });
+
+  it("keeps hidden-section copy when those fields are not in the form", () => {
+    const current = resolveSiteSectionCopy(
+      parseSiteSectionCopy({ hero_heading: "Keep this" }),
+    );
+    const formData = new FormData();
+    formData.set("contactTagline", "New footer line");
+    const merged = mergeSectionCopyFromFormData(formData, current);
+    expect(merged.hero_heading).toBe("Keep this");
+    expect(merged.contact_tagline).toBe("New footer line");
   });
 });

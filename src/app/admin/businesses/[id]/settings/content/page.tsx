@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { AdminContentForm } from "@/components/admin/business-settings-forms";
 import { SettingsPanel } from "@/components/admin/settings-panel";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import { hasTemplateSection } from "@/lib/templates/catalog";
+import {
+  parseSiteSectionCopy,
+  resolveSiteSectionCopy,
+} from "@/lib/templates/section-copy";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -35,10 +40,30 @@ export default async function BusinessContentSettingsPage({ params }: PageProps)
     siteSettings = created;
   }
 
+  const { data: assignment } = await supabase
+    .from("business_template_assignments")
+    .select("template_id")
+    .eq("business_id", id)
+    .maybeSingle();
+
+  const { data: assignedTemplate } = assignment
+    ? await supabase
+        .from("site_templates")
+        .select("name, allowed_sections")
+        .eq("id", assignment.template_id)
+        .maybeSingle()
+    : { data: null };
+
+  const allowedSections = Array.isArray(assignedTemplate?.allowed_sections)
+    ? assignedTemplate.allowed_sections.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : [];
+
   return (
     <SettingsPanel
       title="Content"
-      description="Logo, favicon, hero, and gallery for the assigned template."
+      description="Images and written copy for each site section."
     >
       <AdminContentForm
         businessId={business.id}
@@ -46,6 +71,13 @@ export default async function BusinessContentSettingsPage({ params }: PageProps)
         faviconPath={siteSettings?.favicon_path ?? null}
         heroImagePath={siteSettings?.hero_image_path ?? null}
         galleryPaths={siteSettings?.gallery_paths ?? []}
+        copy={resolveSiteSectionCopy(
+          parseSiteSectionCopy(siteSettings?.section_copy_json),
+        )}
+        showHero={hasTemplateSection(allowedSections, "hero")}
+        showGallery={hasTemplateSection(allowedSections, "gallery")}
+        showContact={hasTemplateSection(allowedSections, "contact")}
+        assignedTemplateName={assignedTemplate?.name ?? null}
         previewHref={`/preview/${business.slug}`}
       />
     </SettingsPanel>
