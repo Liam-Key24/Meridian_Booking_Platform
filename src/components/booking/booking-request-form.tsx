@@ -2,6 +2,7 @@
 
 import { useActionState, useId, useMemo } from "react";
 import Script from "next/script";
+import { BookingLegalNotice } from "@/components/booking/booking-legal-notice";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import {
   submitBookingRequest,
@@ -117,6 +118,7 @@ export function BookingRequestForm({
           name="customerPhone"
           type="tel"
           placeholder="+44…"
+          required
           autoComplete="tel"
         />
         <Select
@@ -171,6 +173,8 @@ export function BookingRequestForm({
             this request.
           </span>
         </label>
+
+        <BookingLegalNotice embed={embed} />
 
         {turnstileSiteKey ? (
           <div

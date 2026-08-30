@@ -5,6 +5,7 @@ export { EmptyState } from "./empty-state";
 export { ErrorState } from "./error-state";
 export { Input } from "./input";
 export { LoadingState } from "./loading-state";
+export { RequiredMark } from "./required-mark";
 export { Select } from "./select";
 export { StatusLabel } from "./status-label";
 export { Textarea } from "./textarea";

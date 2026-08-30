@@ -160,6 +160,16 @@ describe("hospitality dashboard baseline protection", () => {
     const allergyTags = readSrc("src/components/dashboard/allergy-tags.tsx");
     expect(allergyTags).toContain("export function hasAllergies");
     expect(allergyTags).toContain("AllergyEditor");
+    expect(allergyTags).toContain("AllergyDropdown");
+    expect(allergyTags).toContain("No allergies");
+    expect(allergyTags).toContain("Add another allergy");
+    const publicForm = readSrc(
+      "src/components/booking/hospitality-public-booking-form.tsx",
+    );
+    expect(publicForm).toContain("AllergyDropdown");
+    expect(publicForm).not.toContain("AllergyEditor");
+    expect(publicForm).toContain("if (next.length > 0) setNoAllergies(false)");
+    expect(publicForm).toContain("BookingLegalNotice");
   });
 
   it("analytics math still supports table-style tick labels", () => {

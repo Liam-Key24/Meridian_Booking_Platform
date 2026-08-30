@@ -48,6 +48,14 @@ describe("validateBookingRequest", () => {
     }
   });
 
+  it("requires a phone number", () => {
+    const result = validateBookingRequest({
+      ...base,
+      customerPhone: "",
+    });
+    expect(result.ok).toBe(false);
+  });
+
   it("rejects invalid email", () => {
     const result = validateBookingRequest({
       ...base,

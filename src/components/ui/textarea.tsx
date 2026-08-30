@@ -1,3 +1,4 @@
+import { RequiredMark } from "@/components/ui/required-mark";
 import { cn } from "@/lib/cn";
 import {
   CLIENT_SURFACE_ERROR,
@@ -24,6 +25,7 @@ export function Textarea({
   id,
   rows = 4,
   surface = "meridian",
+  required,
   ...props
 }: TextareaProps) {
   const textareaId = id ?? props.name;
@@ -38,10 +40,12 @@ export function Textarea({
           )}
         >
           {label}
+          {required ? <RequiredMark surface={surface} /> : null}
         </span>
       ) : null}
       <textarea
         id={textareaId}
+        required={required}
         rows={rows}
         className={cn(
           isClient

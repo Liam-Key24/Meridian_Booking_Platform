@@ -1,3 +1,4 @@
+import { RequiredMark } from "@/components/ui/required-mark";
 import { cn } from "@/lib/cn";
 import {
   CLIENT_SURFACE_ERROR,
@@ -23,6 +24,7 @@ export function Input({
   error,
   id,
   surface = "meridian",
+  required,
   ...props
 }: InputProps) {
   const inputId = id ?? props.name;
@@ -37,10 +39,12 @@ export function Input({
           )}
         >
           {label}
+          {required ? <RequiredMark surface={surface} /> : null}
         </span>
       ) : null}
       <input
         id={inputId}
+        required={required}
         className={cn(
           isClient
             ? cn("h-11 w-full px-4", CLIENT_SURFACE_FIELD)

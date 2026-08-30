@@ -71,7 +71,7 @@ export function validateBookingRequest(
   }
 
   const customerPhone = input.customerPhone.trim();
-  if (customerPhone && (customerPhone.length < 7 || customerPhone.length > 40)) {
+  if (!customerPhone || customerPhone.length < 7 || customerPhone.length > 40) {
     return { ok: false, error: "Please enter a valid phone number." };
   }
 
@@ -143,7 +143,7 @@ export function validateBookingRequest(
       businessSlug: input.businessSlug.trim().toLowerCase(),
       customerName,
       customerEmail,
-      customerPhone: customerPhone || null,
+      customerPhone,
       serviceId: serviceId || null,
       preferredDate: input.preferredDate,
       preferredTime: input.preferredTime,

@@ -3,9 +3,10 @@
 import { useActionState, useEffect, useId, useMemo, useRef, useState } from "react";
 import Script from "next/script";
 import { CalendarBlank, CaretDown } from "@phosphor-icons/react";
-import { AllergyEditor } from "@/components/dashboard/allergy-tags";
+import { BookingLegalNotice } from "@/components/booking/booking-legal-notice";
+import { AllergyDropdown } from "@/components/dashboard/allergy-tags";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
-import { Button, Input, Textarea } from "@/components/ui";
+import { Button, Input, RequiredMark, Textarea } from "@/components/ui";
 import { type AllergyCode } from "@/lib/allergies";
 import {
   submitBookingRequest,
@@ -46,6 +47,7 @@ type FieldErrors = Partial<
   Record<
     | "customerName"
     | "customerEmail"
+    | "customerPhone"
     | "preferredDate"
     | "preferredTime"
     | "guestCount"
@@ -92,10 +94,7 @@ function FieldShell({
       <span className={embed ? CLIENT_SURFACE_LABEL : "font-medium text-meridian-text"}>
         {label}
         {required ? (
-          <span className={embed ? CLIENT_SURFACE_ERROR : "text-meridian-status-declined"}>
-            {" "}
-            *
-          </span>
+          <RequiredMark surface={embed ? "client" : "meridian"} />
         ) : null}
       </span>
       {children}
@@ -168,8 +167,21 @@ export function HospitalityPublicBookingForm({
     };
   }, [dateOpen]);
 
-  const validate = (): FieldErrors => {
+  const validate = (form: HTMLFormElement): FieldErrors => {
     const next: FieldErrors = {};
+    const data = new FormData(form);
+    const name = String(data.get("customerName") ?? "").trim();
+    const email = String(data.get("customerEmail") ?? "").trim();
+    const phone = String(data.get("customerPhone") ?? "").trim();
+    if (name.length < 2) {
+      next.customerName = "Please enter your full name.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      next.customerEmail = "Please enter a valid email address.";
+    }
+    if (phone.length < 7 || phone.length > 40) {
+      next.customerPhone = "Please enter a valid phone number.";
+    }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(preferredDate)) {
       next.preferredDate = "Choose a date.";
     }
@@ -190,7 +202,7 @@ export function HospitalityPublicBookingForm({
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    const next = validate();
+    const next = validate(event.currentTarget);
     setErrors(next);
     if (Object.keys(next).length > 0) {
       event.preventDefault();
@@ -273,212 +285,163 @@ export function HospitalityPublicBookingForm({
           </label>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <Input
-              label="Name"
-              name="customerName"
-              placeholder="Your name"
-              required
-              autoComplete="name"
-              surface={embed ? "client" : "meridian"}
-            />
-            <Input
-              label="Email"
-              name="customerEmail"
-              type="email"
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-              surface={embed ? "client" : "meridian"}
-            />
-            <Input
-              label="Phone"
-              name="customerPhone"
-              type="tel"
-              placeholder="+44…"
-              autoComplete="tel"
-              surface={embed ? "client" : "meridian"}
-            />
-            <Input
-              label={
-                maxPartySize
-                  ? `Guests (max ${maxPartySize})`
-                  : "Guests"
-              }
-              name="guestCount"
-              type="number"
-              min={1}
-              max={partyMax}
-              required
-              value={guestCount}
-              onChange={(event) => setGuestCount(event.target.value)}
-              error={errors.guestCount}
-              surface={embed ? "client" : "meridian"}
-            />
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label="Full name"
+            name="customerName"
+            placeholder="Full name"
+            required
+            autoComplete="name"
+            error={errors.customerName}
+            surface={embed ? "client" : "meridian"}
+          />
+          <Input
+            label="Email"
+            name="customerEmail"
+            type="email"
+            placeholder="you@example.com"
+            required
+            autoComplete="email"
+            error={errors.customerEmail}
+            surface={embed ? "client" : "meridian"}
+          />
+        </div>
 
-          <div className="space-y-4">
-            <FieldShell label="Date" required error={errors.preferredDate} embed={embed}>
-              <div className="relative" ref={datePopoverRef}>
-                <button
-                  id={dateButtonId}
-                  type="button"
-                  onClick={() => setDateOpen((open) => !open)}
-                  aria-expanded={dateOpen}
-                  aria-haspopup="dialog"
-                  className={cn(
-                    embed
-                      ? cn(
-                          "flex h-11 w-full cursor-pointer items-center justify-between gap-2 px-4 text-left text-sm",
-                          CLIENT_SURFACE_FIELD,
-                        )
-                      : cn(
-                          "flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-meridian border bg-meridian-surface px-4 text-left text-sm text-meridian-text",
-                          "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)]",
-                        ),
-                    errors.preferredDate
-                      ? embed
-                        ? CLIENT_SURFACE_FIELD_ERROR
-                        : "border-meridian-status-declined"
-                      : embed
-                        ? undefined
-                        : "border-meridian-border",
-                  )}
-                >
-                  <span className="inline-flex items-center gap-2">
+        <Input
+          label="Phone"
+          name="customerPhone"
+          type="tel"
+          placeholder="+44…"
+          required
+          autoComplete="tel"
+          error={errors.customerPhone}
+          surface={embed ? "client" : "meridian"}
+        />
+
+        <div className="grid grid-cols-2 gap-4">
+          <FieldShell label="Date" required error={errors.preferredDate} embed={embed}>
+            <div className="relative" ref={datePopoverRef}>
+              <button
+                id={dateButtonId}
+                type="button"
+                onClick={() => setDateOpen((open) => !open)}
+                aria-expanded={dateOpen}
+                aria-haspopup="dialog"
+                className={cn(
+                  "flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-meridian border bg-meridian-surface px-4 text-left text-sm text-meridian-text",
+                  "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)]",
+                  errors.preferredDate
+                    ? "border-meridian-status-declined"
+                    : "border-meridian-border",
+                )}
+              >
+                <span className="inline-flex items-center gap-2">
                     <CalendarBlank
-                      className={cn(
-                        "size-4",
-                        embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted",
-                      )}
+                      className="size-4 text-meridian-text-muted"
                       weight="regular"
                       aria-hidden
                     />
                     {formatDateLabel(preferredDate)}
                   </span>
                   <CaretDown
-                    className={cn(
-                      "size-4",
-                      embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted",
-                    )}
+                    className="size-4 text-meridian-text-muted"
                     weight="bold"
                     aria-hidden
                   />
-                </button>
-                {dateOpen ? (
-                  <div
-                    role="dialog"
-                    aria-labelledby={dateButtonId}
-                    className={cn(
-                      "absolute z-30 mt-2 w-[min(100%,20rem)] rounded-meridian p-2 shadow-[0_16px_40px_rgba(20,58,68,0.18)]",
-                      embed
-                        ? CLIENT_SURFACE_PANEL
-                        : "border border-meridian-border bg-meridian-surface",
-                    )}
-                  >
-                    <MiniCalendar
-                      value={preferredDate}
-                      onChange={(next) => {
-                        setPreferredDate(next);
-                        setDateOpen(false);
-                        setErrors((prev) => ({
-                          ...prev,
-                          preferredDate: undefined,
-                        }));
-                      }}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </FieldShell>
+              </button>
+              {dateOpen ? (
+                <div
+                  role="dialog"
+                  aria-labelledby={dateButtonId}
+                  className="absolute z-30 mt-2 w-[min(100%,20rem)] rounded-meridian border border-meridian-border bg-meridian-surface p-2 shadow-[0_16px_40px_rgba(20,58,68,0.18)]"
+                >
+                  <MiniCalendar
+                    value={preferredDate}
+                    onChange={(next) => {
+                      setPreferredDate(next);
+                      setDateOpen(false);
+                      setErrors((prev) => ({
+                        ...prev,
+                        preferredDate: undefined,
+                      }));
+                    }}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </FieldShell>
 
-            <FieldShell label="Time" required error={errors.preferredTime} embed={embed}>
-              <select
-                className={cn(
-                  embed ? embedSelectClass : selectClass,
-                  errors.preferredTime
-                    ? embed
-                      ? CLIENT_SURFACE_FIELD_ERROR
-                      : "border-meridian-status-declined"
-                    : embed
-                      ? undefined
-                      : "border-meridian-border",
-                )}
-                value={preferredTime}
-                onChange={(event) => {
-                  setPreferredTime(event.target.value);
-                  setErrors((prev) => ({
-                    ...prev,
-                    preferredTime: undefined,
-                  }));
-                }}
-                aria-invalid={errors.preferredTime ? true : undefined}
-              >
-                {TIME_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </FieldShell>
-          </div>
+          <FieldShell label="Time" required error={errors.preferredTime} embed={embed}>
+            <select
+              className={cn(
+                embed ? embedSelectClass : selectClass,
+                errors.preferredTime
+                  ? embed
+                    ? CLIENT_SURFACE_FIELD_ERROR
+                    : "border-meridian-status-declined"
+                  : embed
+                    ? undefined
+                    : "border-meridian-border",
+              )}
+              value={preferredTime}
+              onChange={(event) => {
+                setPreferredTime(event.target.value);
+                setErrors((prev) => ({
+                  ...prev,
+                  preferredTime: undefined,
+                }));
+              }}
+              aria-invalid={errors.preferredTime ? true : undefined}
+            >
+              {TIME_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </FieldShell>
         </div>
 
-        <FieldShell label="Allergies" required error={errors.allergies} embed={embed}>
-          <div
-            className={cn(
-              embed ? cn("p-3", CLIENT_SURFACE_PANEL) : "rounded-meridian border bg-meridian-surface p-3",
-              errors.allergies
-                ? embed
-                  ? CLIENT_SURFACE_FIELD_ERROR
-                  : "border-meridian-status-declined"
-                : embed
-                  ? undefined
-                  : "border-meridian-border",
-            )}
-          >
-            <div className="mb-3 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                aria-pressed={noAllergies}
-                onClick={() => {
-                  setNoAllergies(true);
-                  setAllergies([]);
-                  setErrors((prev) => ({ ...prev, allergies: undefined }));
-                }}
-                className={cn(
-                  "inline-flex cursor-pointer items-center rounded-meridian-sm border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase transition-colors",
-                  noAllergies
-                    ? embed
-                      ? "border-transparent bg-[var(--client-accent)] text-[var(--client-background)]"
-                      : "border-transparent bg-meridian-teal text-meridian-text-inverse"
-                    : embed
-                      ? "border-[color-mix(in_srgb,var(--client-text)_20%,transparent)] bg-[var(--client-background)] text-[color-mix(in_srgb,var(--client-text)_60%,transparent)] hover:border-[var(--client-accent)] hover:text-[var(--client-text)]"
-                      : "border-meridian-border bg-meridian-surface text-meridian-text-muted hover:border-meridian-accent hover:text-meridian-text",
-                )}
-              >
-                No allergies
-              </button>
-            </div>
-            <AllergyEditor
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            label={
+              maxPartySize ? `Guests (max ${maxPartySize})` : "Guests"
+            }
+            name="guestCount"
+            type="number"
+            min={1}
+            max={partyMax}
+            required
+            value={guestCount}
+            onChange={(event) => setGuestCount(event.target.value)}
+            error={errors.guestCount}
+            surface={embed ? "client" : "meridian"}
+          />
+          <FieldShell label="Allergies" required error={errors.allergies} embed={embed}>
+            <AllergyDropdown
               value={allergies}
-              onChange={(next) => {
-                setAllergies(next);
-                setNoAllergies(false);
+              noAllergies={noAllergies}
+              error={errors.allergies}
+              onNoAllergiesChange={(next) => {
+                setNoAllergies(next);
+                if (next) setAllergies([]);
                 setErrors((prev) => ({ ...prev, allergies: undefined }));
               }}
-              surface={embed ? "client" : "meridian"}
+              onChange={(next) => {
+                setAllergies(next);
+                if (next.length > 0) setNoAllergies(false);
+                setErrors((prev) => ({ ...prev, allergies: undefined }));
+              }}
             />
-          </div>
-        </FieldShell>
+          </FieldShell>
+        </div>
 
         <Textarea
           label="Notes / request"
           name="notes"
           rows={3}
-          placeholder="Occasion, seating preferences, accessibility needs…"
-          hint="Optional"
+          placeholder="Occasion, large table requests, seating preferences, accessibility needs…"
+          hint="Optional — mention large table requests here."
           surface={embed ? "client" : "meridian"}
         />
 
@@ -505,6 +468,8 @@ export function HospitalityPublicBookingForm({
             this request.
           </span>
         </label>
+
+        <BookingLegalNotice embed={embed} />
 
         {turnstileSiteKey ? (
           <div

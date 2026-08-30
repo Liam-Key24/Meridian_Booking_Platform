@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Acorn,
+  CaretDown,
   CirclesFour,
   CirclesThree,
   CoffeeBean,
@@ -129,6 +131,145 @@ export function AllergyTagStack({
 
 export function hasAllergies(allergies: string[] | null | undefined): boolean {
   return normalizeAllergies(allergies).length > 0;
+}
+
+export function AllergyDropdown({
+  value,
+  onChange,
+  noAllergies,
+  onNoAllergiesChange,
+  error,
+}: {
+  value: AllergyCode[];
+  onChange: (next: AllergyCode[]) => void;
+  noAllergies: boolean;
+  onNoAllergiesChange: (next: boolean) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonId = useId();
+  const available = ALLERGY_CODES.filter((code) => !value.includes(code));
+  const triggerLabel = noAllergies
+    ? "No allergies"
+    : value.length > 0
+      ? "Add another allergy"
+      : "Select allergies";
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: MouseEvent) => {
+      if (!popoverRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("mousedown", onPointer);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onPointer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="space-y-3">
+      <div className="relative" ref={popoverRef}>
+        <button
+          id={buttonId}
+          type="button"
+          onClick={() => setOpen((next) => !next)}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          aria-label="Add an allergy"
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            "flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-meridian border bg-meridian-surface px-4 text-left text-sm text-meridian-text",
+            "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)]",
+            error
+              ? "border-meridian-status-declined"
+              : "border-meridian-border",
+          )}
+        >
+          <span>{triggerLabel}</span>
+          <CaretDown
+            className="size-4 shrink-0 text-meridian-text-muted"
+            weight="bold"
+            aria-hidden
+          />
+        </button>
+        {open ? (
+          <div
+            role="listbox"
+            aria-labelledby={buttonId}
+            className="absolute z-30 mt-2 max-h-64 w-full overflow-auto rounded-meridian border border-meridian-border bg-meridian-surface py-1 shadow-[0_16px_40px_rgba(20,58,68,0.18)]"
+          >
+            <button
+              type="button"
+              role="option"
+              aria-selected={noAllergies}
+              onClick={() => {
+                onNoAllergiesChange(true);
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full cursor-pointer px-4 py-2 text-left text-sm text-meridian-text hover:bg-meridian-surface-subtle",
+                noAllergies && "bg-meridian-surface-subtle font-medium",
+              )}
+            >
+              No allergies
+            </button>
+            {available.map((code) => (
+              <button
+                key={code}
+                type="button"
+                role="option"
+                aria-selected={false}
+                onClick={() => {
+                  onChange(normalizeAllergies([...value, code]));
+                  setOpen(false);
+                }}
+                className="flex w-full cursor-pointer px-4 py-2 text-left text-sm text-meridian-text hover:bg-meridian-surface-subtle"
+              >
+                {ALLERGY_CATALOG[code].label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {noAllergies ? (
+        <span className="inline-flex items-center gap-1 rounded-meridian-sm bg-[#e7f4ea] px-2 py-1 text-[10px] font-semibold tracking-wide text-[#2f6b3a] uppercase">
+          No allergies
+          <button
+            type="button"
+            onClick={() => onNoAllergiesChange(false)}
+            className="!rounded-sm !bg-transparent !text-[#2f6b3a] hover:!text-meridian-text"
+            aria-label="Clear no allergies"
+          >
+            ×
+          </button>
+        </span>
+      ) : value.length > 0 ? (
+        <span className="flex flex-wrap items-center gap-1.5">
+          {value.map((code) => (
+            <span key={code} className="inline-flex items-center gap-0.5">
+              <AllergyTag code={code} />
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((item) => item !== code))}
+                className="px-0.5 !rounded-sm !bg-transparent !text-meridian-text-muted hover:!text-meridian-text"
+                aria-label={`Remove ${ALLERGY_CATALOG[code].label}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 export function AllergyEditor({
