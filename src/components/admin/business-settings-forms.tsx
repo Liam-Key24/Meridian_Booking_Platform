@@ -513,7 +513,7 @@ export function AdminBrandingForm({
     .filter((row): row is { path: string; url: string } => Boolean(row.url));
 
   return (
-    <form action={action} className="space-y-6" encType="multipart/form-data">
+    <form action={action} className="space-y-6">
       <input type="hidden" name="businessId" value={businessId} />
       {assignedTemplateName && assignedTemplateBranding ? (
         <div className="rounded-meridian border border-meridian-border bg-meridian-surface-subtle px-4 py-3">
@@ -665,7 +665,7 @@ export function AdminMenuPdfsForm({
   );
 
   return (
-    <form action={action} encType="multipart/form-data" className="space-y-6">
+    <form action={action} className="space-y-6">
       <input type="hidden" name="businessId" value={businessId} />
       {documents.map((doc) => (
         <div

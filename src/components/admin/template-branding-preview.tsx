@@ -19,18 +19,18 @@ export function TemplateColorCircles({
   size?: keyof typeof SWATCH_SIZES;
   className?: string;
 }) {
-  const colors = [
-    branding.primary,
-    branding.accent,
-    branding.background,
-    branding.text,
+  const swatches = [
+    { role: "primary", color: branding.primary },
+    { role: "accent", color: branding.accent },
+    { role: "background", color: branding.background },
+    { role: "text", color: branding.text },
   ];
 
   return (
     <div className={cn("flex items-center -space-x-1.5", className)}>
-      {colors.map((color) => (
+      {swatches.map(({ role, color }) => (
         <span
-          key={color}
+          key={role}
           title={color}
           className={cn(
             "rounded-full ring-2 ring-meridian-surface",

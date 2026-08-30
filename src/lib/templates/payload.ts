@@ -9,6 +9,10 @@ import {
   brandingFromSiteSettings,
   type ClientSiteBranding,
 } from "@/lib/templates/branding";
+import {
+  siteSettingsUseDefaultColors,
+  templateBrandingPresetForSlug,
+} from "@/lib/templates/catalog";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { canPreviewOrPublishTemplate } from "@/lib/templates/publish-rules";
 import type { Json } from "@/types/database";
@@ -100,6 +104,22 @@ export async function getClientSitePagePayload(
     .eq("business_id", business.id)
     .maybeSingle();
 
+  let branding = brandingFromSiteSettings(siteSettings);
+  const usesDefaultColors = Boolean(
+    siteSettings && siteSettingsUseDefaultColors(siteSettings),
+  );
+
+  if (usesDefaultColors) {
+    const preset = templateBrandingPresetForSlug(template.slug);
+    branding = {
+      ...branding,
+      primary_color: preset.primary,
+      accent_color: preset.accent,
+      background_color: preset.background,
+      text_color: preset.text,
+    };
+  }
+
   return {
     business: {
       id: business.id,
@@ -111,7 +131,7 @@ export async function getClientSitePagePayload(
       ...template,
       allowed_sections: parseSections(template.allowed_sections),
     },
-    branding: brandingFromSiteSettings(siteSettings),
+    branding,
     booking,
   };
 }
