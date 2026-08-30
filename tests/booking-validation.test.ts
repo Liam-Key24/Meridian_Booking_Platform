@@ -17,6 +17,8 @@ const base = {
   preferredTime: "10:30",
   guestCount: "2",
   notes: "Window seat",
+  allergies: "",
+  noAllergies: false,
   privacyConsent: true,
   companyWebsite: "",
 };
@@ -51,6 +53,38 @@ describe("validateBookingRequest", () => {
       ...base,
       customerEmail: "not-an-email",
     });
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts hospitality requests without a service", () => {
+    const result = validateBookingRequest(
+      { ...base, serviceId: "", noAllergies: true },
+      { requireService: false, requireGuestCount: true },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.serviceId).toBeNull();
+      expect(result.data.guestCount).toBe(2);
+    }
+  });
+
+  it("enforces max party size when provided", () => {
+    const result = validateBookingRequest(
+      { ...base, guestCount: "8", noAllergies: true },
+      { requireService: false, requireGuestCount: true, maxGuestCount: 6 },
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("requires allergy declaration for hospitality", () => {
+    const result = validateBookingRequest(
+      { ...base, serviceId: "" },
+      {
+        requireService: false,
+        requireGuestCount: true,
+        requireAllergyDeclaration: true,
+      },
+    );
     expect(result.ok).toBe(false);
   });
 });

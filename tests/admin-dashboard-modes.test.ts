@@ -61,15 +61,28 @@ describe("admin dashboard mode controls", () => {
     expect(list).toContain("AdminDataTable");
   });
 
-  it("admin detail exposes metrics, capabilities, subscription, and audit", () => {
+  it("admin detail is a usage landing with settings CTA", () => {
     const page = readSrc("src/app/admin/businesses/[id]/page.tsx");
     expect(page).toContain("getAdminBusinessOpsMetrics");
-    expect(page).toContain("listBusinessAuditHistory");
-    expect(page).toContain("BusinessCapabilitiesForm");
-    expect(page).toContain("BusinessSubscriptionForm");
-    expect(page).toContain("No customer contact details shown here");
+    expect(page).toContain("Configure settings");
+    expect(page).toContain("Usage overview");
     expect(page).toContain("Live metrics");
     expect(page).toContain("MetricCard");
+    expect(page).not.toContain("BusinessCapabilitiesForm");
+  });
+
+  it("admin settings mini-pages hold configuration forms", () => {
+    const capabilities = readSrc(
+      "src/app/admin/businesses/[id]/settings/capabilities/page.tsx",
+    );
+    expect(capabilities).toContain("BusinessCapabilitiesForm");
+    const access = readSrc(
+      "src/app/admin/businesses/[id]/settings/access/page.tsx",
+    );
+    expect(access).toContain("BusinessSubscriptionForm");
+    expect(readSrc("src/app/admin/businesses/[id]/settings/layout.tsx")).toContain(
+      "BusinessSettingsNav",
+    );
   });
 
   it("admin actions require admin auth, validate input, and write audit logs", () => {

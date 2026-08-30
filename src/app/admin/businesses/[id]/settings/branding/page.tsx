@@ -1,0 +1,58 @@
+import { notFound } from "next/navigation";
+import { AdminBrandingForm } from "@/components/admin/business-settings-forms";
+import { SettingsPanel } from "@/components/admin/settings-panel";
+import { DEFAULT_BRAND_COLORS } from "@/lib/admin/site-settings";
+import { requireMeridianAdmin } from "@/lib/admin/require-admin";
+import { createClient } from "@/lib/supabase/server";
+
+type PageProps = { params: Promise<{ id: string }> };
+
+export default async function BusinessBrandingSettingsPage({ params }: PageProps) {
+  const { id } = await params;
+  await requireMeridianAdmin();
+  const supabase = await createClient();
+
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id, slug")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!business) notFound();
+
+  let { data: siteSettings } = await supabase
+    .from("client_site_settings")
+    .select("*")
+    .eq("business_id", id)
+    .maybeSingle();
+
+  if (!siteSettings) {
+    await supabase.from("client_site_settings").insert({ business_id: id });
+    const { data: created } = await supabase
+      .from("client_site_settings")
+      .select("*")
+      .eq("business_id", id)
+      .maybeSingle();
+    siteSettings = created;
+  }
+
+  return (
+    <SettingsPanel
+      title="Branding"
+      description="Colours and fonts for the assigned template."
+    >
+      <AdminBrandingForm
+        businessId={business.id}
+        primaryColor={siteSettings?.primary_color ?? DEFAULT_BRAND_COLORS.primary_color}
+        accentColor={siteSettings?.accent_color ?? DEFAULT_BRAND_COLORS.accent_color}
+        backgroundColor={
+          siteSettings?.background_color ?? DEFAULT_BRAND_COLORS.background_color
+        }
+        textColor={siteSettings?.text_color ?? DEFAULT_BRAND_COLORS.text_color}
+        headingFontPath={siteSettings?.heading_font_path ?? null}
+        bodyFontPath={siteSettings?.body_font_path ?? null}
+        previewHref={`/preview/${business.slug}`}
+      />
+    </SettingsPanel>
+  );
+}

@@ -19,6 +19,16 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/cn";
 import {
+  CLIENT_SURFACE_ERROR,
+  CLIENT_SURFACE_FIELD,
+  CLIENT_SURFACE_FIELD_ERROR,
+  CLIENT_SURFACE_HINT,
+  CLIENT_SURFACE_LABEL,
+  CLIENT_SURFACE_MUTED,
+  CLIENT_SURFACE_PANEL,
+  type SurfaceTheme,
+} from "@/lib/templates/client-surface-theme";
+import {
   ALLERGY_CATALOG,
   ALLERGY_CODES,
   normalizeAllergies,
@@ -125,12 +135,15 @@ export function AllergyEditor({
   value,
   onChange,
   className,
+  surface = "meridian",
 }: {
   value: AllergyCode[];
   onChange: (next: AllergyCode[]) => void;
   className?: string;
+  surface?: SurfaceTheme;
 }) {
   const selected = new Set(value);
+  const isClient = surface === "client";
 
   const toggle = (code: AllergyCode) => {
     const next = selected.has(code)
@@ -141,7 +154,7 @@ export function AllergyEditor({
 
   return (
     <div className={cn("space-y-2.5", className)}>
-      <p className="text-xs text-meridian-text-muted">
+      <p className={cn("text-xs", isClient ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted")}>
         Tap to add or remove allergens for this booking.
       </p>
       <div
@@ -162,8 +175,12 @@ export function AllergyEditor({
               className={cn(
                 "inline-flex cursor-pointer items-center gap-1 rounded-meridian-sm border px-1.5 py-1 text-[10px] font-semibold tracking-wide uppercase transition-colors",
                 isOn
-                  ? cn(def.bgClass, def.textClass, "border-transparent")
-                  : "border-meridian-border bg-meridian-surface text-meridian-text-muted hover:border-meridian-accent hover:text-meridian-text",
+                  ? isClient
+                    ? "border-transparent bg-[var(--client-accent)] text-[var(--client-background)]"
+                    : cn(def.bgClass, def.textClass, "border-transparent")
+                  : isClient
+                    ? "border-[color-mix(in_srgb,var(--client-text)_20%,transparent)] bg-[var(--client-background)] text-[color-mix(in_srgb,var(--client-text)_60%,transparent)] hover:border-[var(--client-accent)] hover:text-[var(--client-text)]"
+                    : "border-meridian-border bg-meridian-surface text-meridian-text-muted hover:border-meridian-accent hover:text-meridian-text",
               )}
             >
               <AllergyGlyph code={code} className="size-3" />

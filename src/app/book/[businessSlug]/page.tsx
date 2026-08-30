@@ -47,6 +47,8 @@ export default async function BookPage({ params }: BookPageProps) {
         externalBookingUrl={page.settings.external_booking_url}
         services={page.services}
         turnstileSiteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? null}
+        dashboardMode={page.dashboardMode}
+        maxPartySize={page.settings.max_party_size}
       />
     </main>
   );

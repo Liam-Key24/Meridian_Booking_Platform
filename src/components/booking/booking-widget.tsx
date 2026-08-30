@@ -1,5 +1,7 @@
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { BookingRequestForm } from "@/components/booking/booking-request-form";
+import { HospitalityPublicBookingForm } from "@/components/booking/hospitality-public-booking-form";
+import type { DashboardMode } from "@/lib/business/modes";
 import type { BookingMode } from "@/types/database";
 
 export type BookingWidgetService = {
@@ -16,6 +18,11 @@ export type BookingWidgetProps = {
   externalBookingUrl: string | null;
   services: BookingWidgetService[];
   turnstileSiteKey?: string | null;
+  dashboardMode?: DashboardMode;
+  maxPartySize?: number | null;
+  /** Hide template-level chrome when embedded inside a client-site layout. */
+  embed?: boolean;
+  submitLabel?: string;
   /** Optional className for embed layouts on Meridian client sites. */
   className?: string;
 };
@@ -31,6 +38,10 @@ export function BookingWidget({
   externalBookingUrl,
   services,
   turnstileSiteKey,
+  dashboardMode = "hospitality",
+  maxPartySize = null,
+  embed = false,
+  submitLabel,
   className,
 }: BookingWidgetProps) {
   if (bookingMode === "external") {
@@ -45,23 +56,29 @@ export function BookingWidget({
   }
 
   const showExternal = bookingMode === "hybrid" && Boolean(externalBookingUrl);
+  const isHospitality = dashboardMode === "hospitality";
+  const canShowForm = isHospitality || services.length > 0;
 
   return (
     <div className={className}>
       <div className="space-y-8">
-        <header className="space-y-3">
-          <Badge tone="soft">
-            {bookingMode === "hybrid" ? "Hybrid booking" : "Public booking"}
-          </Badge>
-          <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
-            {businessName}
-          </h1>
-          <p className="text-meridian-text-muted">
-            {bookingMode === "hybrid"
-              ? "Request a time through Meridian, or continue with the business’s existing booking provider."
-              : "Submit a request. This does not confirm your booking."}
-          </p>
-        </header>
+        {embed ? null : (
+          <header className="space-y-3">
+            <Badge tone="soft">
+              {bookingMode === "hybrid" ? "Hybrid booking" : "Public booking"}
+            </Badge>
+            <h1 className="text-3xl font-semibold tracking-tight text-meridian-text">
+              {businessName}
+            </h1>
+            <p className="text-meridian-text-muted">
+              {bookingMode === "hybrid"
+                ? "Request a time through Meridian, or continue with the business’s existing booking provider."
+                : isHospitality
+                  ? "Request a table. This does not confirm your booking."
+                  : "Submit a request. This does not confirm your booking."}
+            </p>
+          </header>
+        )}
 
         {showExternal ? (
           <Card
@@ -80,13 +97,34 @@ export function BookingWidget({
         ) : null}
 
         <Card
-          title="Request via Meridian"
-          description="We’ll send your preferred time to the business for review."
+          title={
+            embed
+              ? undefined
+              : isHospitality
+                ? "Request a table"
+                : "Request via Meridian"
+          }
+          description={
+            embed
+              ? undefined
+              : "We’ll send your preferred time to the business for review."
+          }
+          padding={embed ? "sm" : "md"}
+          className={embed ? "border-0 bg-transparent p-0 shadow-none" : undefined}
         >
-          {services.length === 0 ? (
+          {!canShowForm ? (
             <EmptyState
               title="No services available"
               description="This business has not published bookable services yet."
+            />
+          ) : isHospitality ? (
+            <HospitalityPublicBookingForm
+              businessSlug={businessSlug}
+              businessName={businessName}
+              maxPartySize={maxPartySize}
+              turnstileSiteKey={turnstileSiteKey}
+              submitLabel={submitLabel ?? "Find a Table"}
+              embed={embed}
             />
           ) : (
             <BookingRequestForm
@@ -94,6 +132,8 @@ export function BookingWidget({
               businessName={businessName}
               services={services}
               turnstileSiteKey={turnstileSiteKey}
+              submitLabel={submitLabel}
+              embed={embed}
             />
           )}
         </Card>

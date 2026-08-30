@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import {
+  presetToSiteSettingsColors,
+  templateBrandingPresetForSlug,
+} from "@/lib/templates/catalog";
+import { revalidatePublishedClientSitePaths } from "@/lib/templates/sync";
 
 export type TemplateAssignState = {
   status: "idle" | "success" | "error";
@@ -27,6 +33,16 @@ export async function assignBusinessTemplate(
 
   const supabase = await createClient();
 
+  const { data: business } = await supabase
+    .from("businesses")
+    .select("id, slug, dashboard_mode")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  if (!business) {
+    return { status: "error", message: "Business not found." };
+  }
+
   if (!templateId) {
     const { error } = await supabase
       .from("business_template_assignments")
@@ -36,12 +52,14 @@ export async function assignBusinessTemplate(
       return { status: "error", message: "Could not clear template assignment." };
     }
     revalidatePath(`/admin/businesses/${businessId}`);
+    revalidatePath(`/admin/businesses/${businessId}/settings/template`);
+    await revalidatePublishedClientSitePaths(businessId);
     return { status: "success", message: "Template assignment cleared." };
   }
 
   const { data: template } = await supabase
     .from("site_templates")
-    .select("id, status")
+    .select("id, status, dashboard_mode, slug")
     .eq("id", templateId)
     .maybeSingle();
 
@@ -51,6 +69,25 @@ export async function assignBusinessTemplate(
       message: "Only active templates can be assigned for preview/publishing.",
     };
   }
+
+  if (
+    template.dashboard_mode &&
+    template.dashboard_mode !== business.dashboard_mode
+  ) {
+    return {
+      status: "error",
+      message:
+        "Template dashboard mode must match the business mode before assignment.",
+    };
+  }
+
+  const { data: currentAssignment } = await supabase
+    .from("business_template_assignments")
+    .select("template_id")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  const switchingTemplate = currentAssignment?.template_id !== templateId;
 
   const { error } = await supabase.from("business_template_assignments").upsert(
     {
@@ -67,6 +104,39 @@ export async function assignBusinessTemplate(
     return { status: "error", message: "Could not assign template." };
   }
 
+  if (switchingTemplate) {
+    const brandingColors = presetToSiteSettingsColors(
+      templateBrandingPresetForSlug(template.slug),
+    );
+    const adminDb = createServiceRoleClient();
+    const { error: brandingUpsertError } = await adminDb
+      .from("client_site_settings")
+      .upsert(
+        {
+          business_id: businessId,
+          ...brandingColors,
+        },
+        { onConflict: "business_id" },
+      );
+
+    if (brandingUpsertError) {
+      console.error("[templates] assign branding", brandingUpsertError);
+      return {
+        status: "error",
+        message: "Template assigned but default colours could not be applied.",
+      };
+    }
+  }
+
   revalidatePath(`/admin/businesses/${businessId}`);
-  return { status: "success", message: "Template assigned." };
+  revalidatePath(`/admin/businesses/${businessId}/settings/branding`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/content`);
+  revalidatePath(`/admin/businesses/${businessId}/settings/template`);
+  await revalidatePublishedClientSitePaths(businessId);
+  return {
+    status: "success",
+    message: switchingTemplate
+      ? "Template assigned."
+      : "Template saved.",
+  };
 }
