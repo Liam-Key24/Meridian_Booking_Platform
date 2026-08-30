@@ -1,5 +1,6 @@
 import "server-only";
 
+import { unstable_noStore as noStore } from "next/cache";
 import {
   getPublicBookingPage,
   type PublicBookingPage,
@@ -9,10 +10,6 @@ import {
   brandingFromSiteSettings,
   type ClientSiteBranding,
 } from "@/lib/templates/branding";
-import {
-  siteSettingsUseDefaultColors,
-  templateBrandingPresetForSlug,
-} from "@/lib/templates/catalog";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { canPreviewOrPublishTemplate } from "@/lib/templates/publish-rules";
 import type { Json } from "@/types/database";
@@ -47,6 +44,7 @@ function parseSections(value: Json): string[] {
 export async function getClientSitePagePayload(
   businessSlug: string,
 ): Promise<ClientSitePagePayload | null> {
+  noStore();
   const supabase = createServiceRoleClient();
 
   const { data: business } = await supabase
@@ -104,21 +102,7 @@ export async function getClientSitePagePayload(
     .eq("business_id", business.id)
     .maybeSingle();
 
-  let branding = brandingFromSiteSettings(siteSettings);
-  const usesDefaultColors = Boolean(
-    siteSettings && siteSettingsUseDefaultColors(siteSettings),
-  );
-
-  if (usesDefaultColors) {
-    const preset = templateBrandingPresetForSlug(template.slug);
-    branding = {
-      ...branding,
-      primary_color: preset.primary,
-      accent_color: preset.accent,
-      background_color: preset.background,
-      text_color: preset.text,
-    };
-  }
+  const branding = brandingFromSiteSettings(siteSettings);
 
   return {
     business: {

@@ -170,6 +170,21 @@ export function templateBrandingPresetForSlug(slug: string): TemplateBrandingPre
   return catalogEntryForSlug(slug).branding;
 }
 
+/** Map catalog preset fields to client_site_settings column names. */
+export function presetToSiteSettingsColors(preset: TemplateBrandingPreset): {
+  primary_color: string;
+  accent_color: string;
+  background_color: string;
+  text_color: string;
+} {
+  return {
+    primary_color: preset.primary,
+    accent_color: preset.accent,
+    background_color: preset.background,
+    text_color: preset.text,
+  };
+}
+
 export function hasTemplateSection(
   allowedSections: string[],
   section: TemplateSectionKey,

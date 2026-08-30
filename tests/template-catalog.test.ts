@@ -3,6 +3,7 @@ import {
   catalogEntryForSlug,
   enrichTemplateForAdmin,
   hasTemplateSection,
+  presetToSiteSettingsColors,
   siteSettingsUseDefaultColors,
   templateBrandingPresetForSlug,
 } from "@/lib/templates/catalog";
@@ -20,6 +21,16 @@ describe("template catalog", () => {
     const preset = templateBrandingPresetForSlug("hospitality-minimal");
     expect(preset.accent).toBe("#059669");
     expect(preset.bodyFontLabel).toBe("Sans");
+  });
+
+  it("maps catalog preset fields to site settings columns", () => {
+    const preset = templateBrandingPresetForSlug("hospitality-classic");
+    expect(presetToSiteSettingsColors(preset)).toEqual({
+      primary_color: "#1C1917",
+      accent_color: "#92400E",
+      background_color: "#FAF7F2",
+      text_color: "#1C1917",
+    });
   });
 
   it("detects Meridian default colours", () => {

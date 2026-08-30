@@ -81,4 +81,22 @@ describe("client site branding", () => {
     expect(vars["--client-font-heading"]).toContain("Georgia");
     expect(vars["--client-font-body"]).toContain("system-ui");
   });
+
+  it("uses saved site settings colours on preview", () => {
+    const branding = brandingFromSiteSettings({
+      primary_color: "#112233",
+      accent_color: "#445566",
+      background_color: "#FFFFFF",
+      text_color: "#000000",
+      logo_path: null,
+      hero_image_path: null,
+      gallery_paths: [],
+      menu_json: { sections: [] },
+      menu_pdfs_json: { documents: [] },
+      template_config_version: 2,
+    });
+
+    expect(branding.primary_color).toBe("#112233");
+    expect(branding.accent_color).toBe("#445566");
+  });
 });

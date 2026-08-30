@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
 export function ColorCirclePicker({
@@ -16,6 +16,10 @@ export function ColorCirclePicker({
 }) {
   const [value, setValue] = useState(defaultValue);
   const dimension = size === "lg" ? "size-11" : "size-8";
+
+  useEffect(() => {
+    setValue(defaultValue);
+  }, [defaultValue]);
 
   return (
     <label className="flex flex-col items-center gap-1.5">

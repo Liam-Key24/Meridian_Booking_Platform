@@ -3,7 +3,6 @@ import { AdminBrandingForm } from "@/components/admin/business-settings-forms";
 import { SettingsPanel } from "@/components/admin/settings-panel";
 import { DEFAULT_BRAND_COLORS } from "@/lib/admin/site-settings";
 import { requireMeridianAdmin } from "@/lib/admin/require-admin";
-import { templateBrandingPresetForSlug } from "@/lib/templates/catalog";
 import { createClient } from "@/lib/supabase/server";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -15,7 +14,7 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
 
   const { data: business } = await supabase
     .from("businesses")
-    .select("id")
+    .select("id, slug")
     .eq("id", id)
     .maybeSingle();
 
@@ -46,7 +45,7 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
   const { data: assignedTemplate } = assignment
     ? await supabase
         .from("site_templates")
-        .select("name, slug")
+        .select("name")
         .eq("id", assignment.template_id)
         .maybeSingle()
     : { data: null };
@@ -54,7 +53,7 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
   return (
     <SettingsPanel
       title="Branding"
-      description="Colours, logo, hero image, and gallery for future client templates."
+      description="Colours and images for the assigned template."
     >
       <AdminBrandingForm
         businessId={business.id}
@@ -68,11 +67,7 @@ export default async function BusinessBrandingSettingsPage({ params }: PageProps
         heroImagePath={siteSettings?.hero_image_path ?? null}
         galleryPaths={siteSettings?.gallery_paths ?? []}
         assignedTemplateName={assignedTemplate?.name ?? null}
-        assignedTemplateBranding={
-          assignedTemplate
-            ? templateBrandingPresetForSlug(assignedTemplate.slug)
-            : null
-        }
+        previewHref={`/preview/${business.slug}`}
       />
     </SettingsPanel>
   );

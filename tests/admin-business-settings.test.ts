@@ -149,7 +149,7 @@ describe("template settings sync", () => {
 
     expect(sync).toContain("syncSettingsToTemplate");
     expect(sync).toContain("revalidatePublishedClientSitePaths");
-    expect(assign).toContain("syncSettingsToTemplate");
+    expect(assign).toContain("revalidatePublishedClientSitePaths");
     expect(adminActions).toContain("syncSettingsToTemplate");
     expect(siteSettings).toContain("syncSettingsToTemplate");
   });

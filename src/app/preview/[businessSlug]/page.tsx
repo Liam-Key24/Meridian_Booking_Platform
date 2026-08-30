@@ -2,6 +2,9 @@ import { EmptyState, ErrorState } from "@/components/ui";
 import { renderClientSiteLayout } from "@/lib/templates/layouts";
 import { getClientSitePagePayload } from "@/lib/templates/payload";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type PageProps = {
   params: Promise<{ businessSlug: string }>;
 };

@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 import { Button, Input, Select, Textarea } from "@/components/ui";
 import {
   updateAdminHospitalityHours,
@@ -15,18 +16,11 @@ import {
   type SiteSettingsActionState,
 } from "@/lib/admin/site-settings-actions";
 import { ColorCirclePicker } from "@/components/admin/color-circle-picker";
-import { TemplateBrandingPreview } from "@/components/admin/template-branding-preview";
 import {
-  DEFAULT_BRAND_COLORS,
   publicAssetUrl,
   type BusinessMenuPdfs,
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
-import type { TemplateBrandingPreset } from "@/lib/templates/catalog";
-import {
-  syncBusinessTemplateAction,
-  type TemplateSyncState,
-} from "@/lib/templates/sync";
 import {
   WEEKDAYS,
   WEEKDAY_LABELS,
@@ -39,12 +33,11 @@ import {
 
 const adminInitial: AdminActionState = { status: "idle", message: null };
 const siteInitial: SiteSettingsActionState = { status: "idle", message: null };
-const syncInitial: TemplateSyncState = { status: "idle", message: null };
 
 function Feedback({
   state,
 }: {
-  state: AdminActionState | SiteSettingsActionState | TemplateSyncState;
+  state: AdminActionState | SiteSettingsActionState;
 }) {
   if (state.status === "idle") return null;
   return (
@@ -489,7 +482,7 @@ export function AdminBrandingForm({
   heroImagePath,
   galleryPaths,
   assignedTemplateName,
-  assignedTemplateBranding,
+  previewHref,
 }: {
   businessId: string;
   primaryColor: string;
@@ -500,12 +493,20 @@ export function AdminBrandingForm({
   heroImagePath: string | null;
   galleryPaths: string[];
   assignedTemplateName?: string | null;
-  assignedTemplateBranding?: TemplateBrandingPreset | null;
+  previewHref?: string;
 }) {
   const [state, action, pending] = useActionState(
     updateBusinessBranding,
     siteInitial,
   );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "success") {
+      router.refresh();
+    }
+  }, [router, state.status]);
+
   const logoUrl = publicAssetUrl(logoPath);
   const heroUrl = publicAssetUrl(heroImagePath);
   const galleryUrls = galleryPaths
@@ -515,15 +516,20 @@ export function AdminBrandingForm({
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="businessId" value={businessId} />
-      {assignedTemplateName && assignedTemplateBranding ? (
-        <div className="rounded-meridian border border-meridian-border bg-meridian-surface-subtle px-4 py-3">
-          <p className="text-sm font-medium text-meridian-text">
-            {assignedTemplateName} defaults
-          </p>
-          <div className="mt-2">
-            <TemplateBrandingPreview branding={assignedTemplateBranding} />
-          </div>
-        </div>
+      {assignedTemplateName || previewHref ? (
+        <p className="text-sm text-meridian-text-muted">
+          {assignedTemplateName ? `${assignedTemplateName}. ` : null}
+          {previewHref ? (
+            <a
+              href={previewHref}
+              className="font-medium text-meridian-teal hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open preview
+            </a>
+          ) : null}
+        </p>
       ) : null}
       <div className="flex flex-wrap gap-6">
         <ColorCirclePicker
@@ -758,56 +764,3 @@ export function AdminMenusForm({
   return <AdminMenuPdfsForm businessId={businessId} menuPdfs={menuPdfs} />;
 }
 
-export function AdminTemplateSyncForm({
-  businessId,
-  configVersion,
-  syncedAt,
-  syncError,
-  assignmentSyncVersion,
-  lastSyncedAt,
-}: {
-  businessId: string;
-  configVersion: number;
-  syncedAt: string | null;
-  syncError: string | null;
-  assignmentSyncVersion: number | null;
-  lastSyncedAt: string | null;
-}) {
-  const [state, action, pending] = useActionState(
-    syncBusinessTemplateAction,
-    syncInitial,
-  );
-
-  return (
-    <div className="space-y-4 border-t border-meridian-border pt-6">
-      <div className="space-y-1 text-sm text-meridian-text-muted">
-        <p>
-          Config version: <strong className="text-meridian-text">{configVersion}</strong>
-          {assignmentSyncVersion !== null
-            ? ` · Assignment sync v${assignmentSyncVersion}`
-            : null}
-        </p>
-        <p>
-          Last synced:{" "}
-          {syncedAt ?? lastSyncedAt ?? "Never — assign a template and update."}
-        </p>
-        {syncError ? (
-          <p className="text-meridian-status-declined">Last error: {syncError}</p>
-        ) : null}
-      </div>
-      <form action={action} className="flex flex-wrap items-center gap-3">
-        <input type="hidden" name="businessId" value={businessId} />
-        <Button type="submit" variant="secondary" disabled={pending}>
-          {pending ? "Updating…" : "Update template"}
-        </Button>
-        <Feedback state={state} />
-      </form>
-      <p className="text-sm text-meridian-text-muted">
-        Pushes the latest branding, menus, booking, hours, and contact settings
-        into the assigned template snapshot.
-      </p>
-    </div>
-  );
-}
-
-export { DEFAULT_BRAND_COLORS };

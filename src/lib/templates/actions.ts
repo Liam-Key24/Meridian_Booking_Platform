@@ -3,14 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { getAuthSnapshot } from "@/lib/auth/business-context";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import {
-  siteSettingsUseDefaultColors,
+  presetToSiteSettingsColors,
   templateBrandingPresetForSlug,
 } from "@/lib/templates/catalog";
-import {
-  revalidatePublishedClientSitePaths,
-  syncSettingsToTemplate,
-} from "@/lib/templates/sync";
+import { revalidatePublishedClientSitePaths } from "@/lib/templates/sync";
 
 export type TemplateAssignState = {
   status: "idle" | "success" | "error";
@@ -83,6 +81,14 @@ export async function assignBusinessTemplate(
     };
   }
 
+  const { data: currentAssignment } = await supabase
+    .from("business_template_assignments")
+    .select("template_id")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  const switchingTemplate = currentAssignment?.template_id !== templateId;
+
   const { error } = await supabase.from("business_template_assignments").upsert(
     {
       business_id: businessId,
@@ -98,37 +104,38 @@ export async function assignBusinessTemplate(
     return { status: "error", message: "Could not assign template." };
   }
 
-  await supabase.from("client_site_settings").upsert(
-    { business_id: businessId },
-    { onConflict: "business_id", ignoreDuplicates: true },
-  );
-
-  const { data: siteSettings } = await supabase
-    .from("client_site_settings")
-    .select("primary_color, accent_color, background_color, text_color")
-    .eq("business_id", businessId)
-    .maybeSingle();
-
-  if (siteSettings && siteSettingsUseDefaultColors(siteSettings)) {
-    const preset = templateBrandingPresetForSlug(template.slug);
-    await supabase
+  if (switchingTemplate) {
+    const brandingColors = presetToSiteSettingsColors(
+      templateBrandingPresetForSlug(template.slug),
+    );
+    const adminDb = createServiceRoleClient();
+    const { error: brandingUpsertError } = await adminDb
       .from("client_site_settings")
-      .update({
-        primary_color: preset.primary,
-        accent_color: preset.accent,
-        background_color: preset.background,
-        text_color: preset.text,
-      })
-      .eq("business_id", businessId);
+      .upsert(
+        {
+          business_id: businessId,
+          ...brandingColors,
+        },
+        { onConflict: "business_id" },
+      );
+
+    if (brandingUpsertError) {
+      console.error("[templates] assign branding", brandingUpsertError);
+      return {
+        status: "error",
+        message: "Template assigned but default colours could not be applied.",
+      };
+    }
   }
 
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath(`/admin/businesses/${businessId}/settings/branding`);
   revalidatePath(`/admin/businesses/${businessId}/settings/template`);
   await revalidatePublishedClientSitePaths(businessId);
-  const message = await syncSettingsToTemplate(
-    businessId,
-    "Template assigned.",
-  );
-  return { status: "success", message };
+  return {
+    status: "success",
+    message: switchingTemplate
+      ? "Template assigned."
+      : "Template saved.",
+  };
 }

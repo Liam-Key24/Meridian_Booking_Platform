@@ -16,6 +16,7 @@ import {
   type MenuPdfDocument,
 } from "@/lib/admin/site-settings";
 import { revalidatePublishedClientSitePaths, syncSettingsToTemplate } from "@/lib/templates/sync";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Json } from "@/types/database";
 
@@ -247,7 +248,8 @@ export async function updateBusinessBranding(
     galleryPaths = galleryPaths.filter((p) => !removeGalleryPaths.includes(p));
   }
 
-  const { error } = await supabase
+  const adminDb = createServiceRoleClient();
+  const { error } = await adminDb
     .from("client_site_settings")
     .update({
       primary_color: primary,
@@ -261,6 +263,7 @@ export async function updateBusinessBranding(
     .eq("business_id", businessId);
 
   if (error) {
+    console.error("[admin] save branding", error);
     return { status: "error", message: "Could not save branding." };
   }
 
@@ -273,13 +276,13 @@ export async function updateBusinessBranding(
     metadata: { primary, accent },
   });
 
-  const message = await syncSettingsToTemplate(businessId, "Branding saved.");
+  await syncSettingsToTemplate(businessId, "Branding saved.");
   revalidateSettings(businessId);
   await revalidatePublishedClientSitePaths(businessId);
 
   return {
     status: "success",
-    message,
+    message: "Branding saved.",
   };
 }
 

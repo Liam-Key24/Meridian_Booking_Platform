@@ -1,5 +1,5 @@
+import { ClientSiteTheme } from "@/components/client-site/client-site-theme";
 import { HospitalityBookingSection } from "@/components/client-site/hospitality-booking-section";
-import { brandingCssVariables } from "@/lib/templates/branding";
 import { hasTemplateSection } from "@/lib/templates/catalog";
 import type { ClientSiteLayoutProps } from "@/lib/templates/layouts";
 
@@ -43,11 +43,22 @@ function ClassicButton({
     "inline-flex h-11 items-center justify-center rounded-full px-6 text-sm font-medium transition";
   const styles =
     variant === "primary"
-      ? "bg-[var(--client-text)] text-[var(--client-background)] hover:opacity-90"
-      : "border border-[color-mix(in_srgb,var(--client-text)_25%,transparent)] text-[var(--client-text)] hover:bg-[color-mix(in_srgb,var(--client-text)_6%,transparent)]";
+      ? "bg-[var(--client-accent)] text-[var(--client-background)] hover:opacity-90"
+      : "border border-[color-mix(in_srgb,var(--client-accent)_35%,transparent)] text-[var(--client-text)] hover:bg-[color-mix(in_srgb,var(--client-accent)_8%,transparent)]";
 
   return (
-    <a href={href} className={`${base} ${styles}`}>
+    <a
+      href={href}
+      className={`${base} ${styles}`}
+      style={
+        variant === "primary"
+          ? {
+              backgroundColor: "var(--client-accent)",
+              color: "var(--client-background)",
+            }
+          : undefined
+      }
+    >
       {children}
     </a>
   );
@@ -161,9 +172,9 @@ export function HospitalityClassicLayout({
     "Experience culinary excellence in an intimate setting, where every dish tells a story of locally-sourced ingredients and masterful technique.";
 
   return (
+    <ClientSiteTheme branding={branding} templateSlug={template.slug}>
     <div
       id="top"
-      style={brandingCssVariables(branding, template.slug) as React.CSSProperties}
       className="min-h-full bg-[var(--client-background)] text-[var(--client-text)] [font-family:var(--client-font-body)] [&_h1]:[font-family:var(--client-font-heading)] [&_h2]:[font-family:var(--client-font-heading)] [&_blockquote]:[font-family:var(--client-font-heading)]"
     >
       {preview ? (
@@ -451,5 +462,6 @@ export function HospitalityClassicLayout({
       </footer>
       ) : null}
     </div>
+    </ClientSiteTheme>
   );
 }

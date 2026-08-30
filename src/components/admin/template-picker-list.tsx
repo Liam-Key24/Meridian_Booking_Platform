@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui";
 import { TemplateBrandingPreview } from "@/components/admin/template-branding-preview";
 import type { AdminTemplateOption } from "@/lib/templates/catalog";
@@ -28,7 +29,14 @@ export function TemplatePickerList({
   stateMessage,
   stateStatus,
 }: TemplatePickerListProps) {
+  const router = useRouter();
   const [selectedId, setSelectedId] = useState(assignedTemplateId ?? "");
+
+  useEffect(() => {
+    if (stateStatus === "success") {
+      router.refresh();
+    }
+  }, [router, stateStatus]);
 
   return (
     <form action={formAction} className="space-y-4">
@@ -109,15 +117,13 @@ export function TemplatePickerList({
       </ul>
 
       <p className="text-xs text-meridian-text-muted">
-        Assigning applies each template&apos;s default colours and fonts to
-        branding when yours are still on the Meridian defaults.{" "}
         <a
           href={`/preview/${businessSlug}`}
           className="font-medium text-meridian-teal hover:underline"
           target="_blank"
           rel="noreferrer"
         >
-          Preview
+          Open preview
         </a>
       </p>
 

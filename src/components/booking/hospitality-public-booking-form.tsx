@@ -12,6 +12,14 @@ import {
   type SubmitBookingState,
 } from "@/lib/booking/actions";
 import { cn } from "@/lib/cn";
+import {
+  CLIENT_SURFACE_ERROR,
+  CLIENT_SURFACE_FIELD,
+  CLIENT_SURFACE_FIELD_ERROR,
+  CLIENT_SURFACE_LABEL,
+  CLIENT_SURFACE_MUTED,
+  CLIENT_SURFACE_PANEL,
+} from "@/lib/templates/client-surface-theme";
 import { todayLocalIso } from "@/lib/dashboard/calendar";
 
 type HospitalityPublicBookingFormProps = {
@@ -71,23 +79,31 @@ function FieldShell({
   required,
   error,
   children,
+  embed = false,
 }: {
   label: React.ReactNode;
   required?: boolean;
   error?: string;
   children: React.ReactNode;
+  embed?: boolean;
 }) {
   return (
     <div className="flex w-full flex-col gap-1.5 text-sm">
-      <span className="font-medium text-meridian-text">
+      <span className={embed ? CLIENT_SURFACE_LABEL : "font-medium text-meridian-text"}>
         {label}
         {required ? (
-          <span className="text-meridian-status-declined"> *</span>
+          <span className={embed ? CLIENT_SURFACE_ERROR : "text-meridian-status-declined"}>
+            {" "}
+            *
+          </span>
         ) : null}
       </span>
       {children}
       {error ? (
-        <span className="text-meridian-status-declined" role="alert">
+        <span
+          className={embed ? CLIENT_SURFACE_ERROR : "text-meridian-status-declined"}
+          role="alert"
+        >
           {error}
         </span>
       ) : null}
@@ -99,6 +115,12 @@ const selectClass =
   "h-11 w-full cursor-pointer appearance-none rounded-meridian border bg-meridian-surface px-4 pr-10 text-sm text-meridian-text " +
   "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)] " +
   "bg-[length:1rem] bg-[right_0.85rem_center] bg-no-repeat " +
+  "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 20 20%22%3E%3Cpath stroke=%22%235a7580%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%221.5%22 d=%22m6 8 4 4 4-4%22/%3E%3C/svg%3E')]";
+
+const embedSelectClass =
+  "h-11 w-full cursor-pointer appearance-none px-4 pr-10 text-sm " +
+  CLIENT_SURFACE_FIELD +
+  " bg-[length:1rem] bg-[right_0.85rem_center] bg-no-repeat " +
   "bg-[url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 20 20%22%3E%3Cpath stroke=%22%235a7580%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%221.5%22 d=%22m6 8 4 4 4-4%22/%3E%3C/svg%3E')]";
 
 export function HospitalityPublicBookingForm({
@@ -178,14 +200,29 @@ export function HospitalityPublicBookingForm({
   if (state.status === "success") {
     return (
       <div
-        className="space-y-3 rounded-meridian border border-meridian-status-confirmed/30 bg-meridian-status-confirmed-bg px-5 py-6"
+        className={cn(
+          "space-y-3 rounded-meridian px-5 py-6",
+          embed
+            ? cn(
+                CLIENT_SURFACE_PANEL,
+                "border-[color-mix(in_srgb,var(--client-accent)_25%,transparent)]",
+              )
+            : "border border-meridian-status-confirmed/30 bg-meridian-status-confirmed-bg",
+        )}
         role="status"
       >
-        <h2 className="text-lg font-semibold text-meridian-text">
+        <h2
+          className={cn(
+            "text-lg font-semibold",
+            embed ? "text-[var(--client-text)]" : "text-meridian-text",
+          )}
+        >
           Request received
         </h2>
-        <p className="text-sm text-meridian-text-muted">{state.message}</p>
-        <p className="text-sm text-meridian-text-muted">
+        <p className={cn("text-sm", embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted")}>
+          {state.message}
+        </p>
+        <p className={cn("text-sm", embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted")}>
           {businessName} will review your request. You have not been confirmed
           yet.
         </p>
@@ -244,6 +281,7 @@ export function HospitalityPublicBookingForm({
               placeholder="Your name"
               required
               autoComplete="name"
+              surface={embed ? "client" : "meridian"}
             />
             <Input
               label="Email"
@@ -252,6 +290,7 @@ export function HospitalityPublicBookingForm({
               placeholder="you@example.com"
               required
               autoComplete="email"
+              surface={embed ? "client" : "meridian"}
             />
             <Input
               label="Phone"
@@ -259,6 +298,7 @@ export function HospitalityPublicBookingForm({
               type="tel"
               placeholder="+44…"
               autoComplete="tel"
+              surface={embed ? "client" : "meridian"}
             />
             <Input
               label={
@@ -274,11 +314,12 @@ export function HospitalityPublicBookingForm({
               value={guestCount}
               onChange={(event) => setGuestCount(event.target.value)}
               error={errors.guestCount}
+              surface={embed ? "client" : "meridian"}
             />
           </div>
 
           <div className="space-y-4">
-            <FieldShell label="Date" required error={errors.preferredDate}>
+            <FieldShell label="Date" required error={errors.preferredDate} embed={embed}>
               <div className="relative" ref={datePopoverRef}>
                 <button
                   id={dateButtonId}
@@ -287,23 +328,40 @@ export function HospitalityPublicBookingForm({
                   aria-expanded={dateOpen}
                   aria-haspopup="dialog"
                   className={cn(
-                    "flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-meridian border bg-meridian-surface px-4 text-left text-sm text-meridian-text",
-                    "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)]",
+                    embed
+                      ? cn(
+                          "flex h-11 w-full cursor-pointer items-center justify-between gap-2 px-4 text-left text-sm",
+                          CLIENT_SURFACE_FIELD,
+                        )
+                      : cn(
+                          "flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-meridian border bg-meridian-surface px-4 text-left text-sm text-meridian-text",
+                          "transition-[border-color,box-shadow] focus-visible:border-meridian-blue focus-visible:shadow-[var(--meridian-focus-ring)]",
+                        ),
                     errors.preferredDate
-                      ? "border-meridian-status-declined"
-                      : "border-meridian-border",
+                      ? embed
+                        ? CLIENT_SURFACE_FIELD_ERROR
+                        : "border-meridian-status-declined"
+                      : embed
+                        ? undefined
+                        : "border-meridian-border",
                   )}
                 >
                   <span className="inline-flex items-center gap-2">
                     <CalendarBlank
-                      className="size-4 text-meridian-text-muted"
+                      className={cn(
+                        "size-4",
+                        embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted",
+                      )}
                       weight="regular"
                       aria-hidden
                     />
                     {formatDateLabel(preferredDate)}
                   </span>
                   <CaretDown
-                    className="size-4 text-meridian-text-muted"
+                    className={cn(
+                      "size-4",
+                      embed ? CLIENT_SURFACE_MUTED : "text-meridian-text-muted",
+                    )}
                     weight="bold"
                     aria-hidden
                   />
@@ -312,7 +370,12 @@ export function HospitalityPublicBookingForm({
                   <div
                     role="dialog"
                     aria-labelledby={dateButtonId}
-                    className="absolute z-30 mt-2 w-[min(100%,20rem)] rounded-meridian border border-meridian-border bg-meridian-surface p-2 shadow-[0_16px_40px_rgba(20,58,68,0.18)]"
+                    className={cn(
+                      "absolute z-30 mt-2 w-[min(100%,20rem)] rounded-meridian p-2 shadow-[0_16px_40px_rgba(20,58,68,0.18)]",
+                      embed
+                        ? CLIENT_SURFACE_PANEL
+                        : "border border-meridian-border bg-meridian-surface",
+                    )}
                   >
                     <MiniCalendar
                       value={preferredDate}
@@ -330,13 +393,17 @@ export function HospitalityPublicBookingForm({
               </div>
             </FieldShell>
 
-            <FieldShell label="Time" required error={errors.preferredTime}>
+            <FieldShell label="Time" required error={errors.preferredTime} embed={embed}>
               <select
                 className={cn(
-                  selectClass,
+                  embed ? embedSelectClass : selectClass,
                   errors.preferredTime
-                    ? "border-meridian-status-declined"
-                    : "border-meridian-border",
+                    ? embed
+                      ? CLIENT_SURFACE_FIELD_ERROR
+                      : "border-meridian-status-declined"
+                    : embed
+                      ? undefined
+                      : "border-meridian-border",
                 )}
                 value={preferredTime}
                 onChange={(event) => {
@@ -358,13 +425,17 @@ export function HospitalityPublicBookingForm({
           </div>
         </div>
 
-        <FieldShell label="Allergies" required error={errors.allergies}>
+        <FieldShell label="Allergies" required error={errors.allergies} embed={embed}>
           <div
             className={cn(
-              "rounded-meridian border bg-meridian-surface p-3",
+              embed ? cn("p-3", CLIENT_SURFACE_PANEL) : "rounded-meridian border bg-meridian-surface p-3",
               errors.allergies
-                ? "border-meridian-status-declined"
-                : "border-meridian-border",
+                ? embed
+                  ? CLIENT_SURFACE_FIELD_ERROR
+                  : "border-meridian-status-declined"
+                : embed
+                  ? undefined
+                  : "border-meridian-border",
             )}
           >
             <div className="mb-3 flex flex-wrap gap-1.5">
@@ -379,8 +450,12 @@ export function HospitalityPublicBookingForm({
                 className={cn(
                   "inline-flex cursor-pointer items-center rounded-meridian-sm border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase transition-colors",
                   noAllergies
-                    ? "border-transparent bg-meridian-teal text-meridian-text-inverse"
-                    : "border-meridian-border bg-meridian-surface text-meridian-text-muted hover:border-meridian-accent hover:text-meridian-text",
+                    ? embed
+                      ? "border-transparent bg-[var(--client-accent)] text-[var(--client-background)]"
+                      : "border-transparent bg-meridian-teal text-meridian-text-inverse"
+                    : embed
+                      ? "border-[color-mix(in_srgb,var(--client-text)_20%,transparent)] bg-[var(--client-background)] text-[color-mix(in_srgb,var(--client-text)_60%,transparent)] hover:border-[var(--client-accent)] hover:text-[var(--client-text)]"
+                      : "border-meridian-border bg-meridian-surface text-meridian-text-muted hover:border-meridian-accent hover:text-meridian-text",
                 )}
               >
                 No allergies
@@ -393,6 +468,7 @@ export function HospitalityPublicBookingForm({
                 setNoAllergies(false);
                 setErrors((prev) => ({ ...prev, allergies: undefined }));
               }}
+              surface={embed ? "client" : "meridian"}
             />
           </div>
         </FieldShell>
@@ -403,13 +479,24 @@ export function HospitalityPublicBookingForm({
           rows={3}
           placeholder="Occasion, seating preferences, accessibility needs…"
           hint="Optional"
+          surface={embed ? "client" : "meridian"}
         />
 
-        <label className="flex items-start gap-3 text-sm text-meridian-text">
+        <label
+          className={cn(
+            "flex items-start gap-3 text-sm",
+            embed ? "text-[var(--client-text)]" : "text-meridian-text",
+          )}
+        >
           <input
             type="checkbox"
             name="privacyConsent"
-            className="mt-1 h-4 w-4 rounded border-meridian-border"
+            className={cn(
+              "mt-1 h-4 w-4 rounded",
+              embed
+                ? "border-[color-mix(in_srgb,var(--client-text)_20%,transparent)] accent-[var(--client-accent)]"
+                : "border-meridian-border",
+            )}
             required
           />
           <span>
@@ -429,7 +516,13 @@ export function HospitalityPublicBookingForm({
         ) : null}
 
         {state.status === "error" && state.message ? (
-          <p className="text-sm text-meridian-status-declined" role="alert">
+          <p
+            className={cn(
+              "text-sm",
+              embed ? CLIENT_SURFACE_ERROR : "text-meridian-status-declined",
+            )}
+            role="alert"
+          >
             {state.message}
           </p>
         ) : null}
@@ -438,7 +531,15 @@ export function HospitalityPublicBookingForm({
           type="submit"
           fullWidth
           disabled={pending}
-          className={embed ? "rounded-full" : undefined}
+          className={embed ? "rounded-full hover:opacity-90" : undefined}
+          style={
+            embed
+              ? {
+                  backgroundColor: "var(--client-accent)",
+                  color: "var(--client-background)",
+                }
+              : undefined
+          }
         >
           {pending ? "Sending request…" : submitLabel}
         </Button>

@@ -46,7 +46,7 @@ export function HospitalityBookingSection({
           maxPartySize={booking.settings.max_party_size}
           embed
           submitLabel="Find a Table"
-          className="[&_button]:rounded-full [&_button]:bg-[var(--client-text)] [&_button]:text-[var(--client-background)]"
+          className="[&_button]:rounded-full [&_button]:bg-[var(--client-accent)] [&_button]:text-[var(--client-background)]"
         />
       </div>
     </section>
